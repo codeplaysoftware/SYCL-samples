@@ -27,15 +27,14 @@
 
 #pragma once
 
+#include "../include/double_buf.hpp"
+
+#include <sycl/sycl.hpp>
+
 #include <iostream>
 #include <random>
 
-#include <CL/sycl.hpp>
-namespace sycl = cl::sycl;
-
-#include <double_buf.hpp>
-
-enum class CellState : cl::sycl::cl_uint {
+enum class CellState : unsigned int {
   LIVE = 1,
   DEAD = 0,
 };
@@ -47,7 +46,7 @@ struct GameGrid {
   sycl::buffer<sycl::float2, 2> vels;
 
   /// Image representing our game state
-  sycl::buffer<sycl::cl_uchar4, 2> img;
+  sycl::buffer<sycl::uchar4, 2> img;
 
   GameGrid(size_t width, size_t height)
       : cells(sycl::range<2>(width, height)),
@@ -75,7 +74,7 @@ class GameOfLifeSim {
       : m_width(width),
         m_height(height),
         m_game(width, height),
-        m_q(sycl::default_selector{}, [](sycl::exception_list el) {
+        m_q(sycl::default_selector_v, [](sycl::exception_list el) {
           for (auto e : el) {
             try {
               std::rethrow_exception(e);
@@ -89,9 +88,9 @@ class GameOfLifeSim {
     // dead
 
     auto acells =
-        m_game.read().cells.get_access<sycl::access::mode::discard_write>();
+        m_game.read().cells.get_host_access(sycl::write_only);
     auto aimg =
-        m_game.read().img.get_access<sycl::access::mode::discard_write>();
+        m_game.read().img.get_host_access(sycl::write_only);
 
     std::random_device rd;
     std::default_random_engine re{ rd() };
@@ -101,7 +100,7 @@ class GameOfLifeSim {
       for (size_t x = 0; x < m_width; x++) {
         acells[sycl::id<2>(x, y)] =
             (dist(rd) == false) ? CellState::DEAD : CellState::LIVE;
-        aimg[sycl::id<2>(y, x)] = sycl::cl_uchar4(0, 0, 0, 0);
+        aimg[sycl::id<2>(y, x)] = sycl::uchar4(0, 0, 0, 0);
       }
     }
   }
@@ -117,7 +116,7 @@ class GameOfLifeSim {
   /// Calls the provided function with image data
   template <typename Func>
   void with_img(Func&& func) {
-    auto acc = m_game.read().img.get_access<sycl::access::mode::read>();
+    auto acc = m_game.read().img.get_host_access(sycl::read_only);
     func(acc.get_pointer());
   }
 
@@ -132,7 +131,7 @@ class GameOfLifeSim {
       // Have to write into read-buffer rather than write-buffer, since it is
       // the read-buffer
       // that will be read by the kernel.
-      auto acc = this->m_game.read().cells.get_access<mode::write>();
+      auto acc = this->m_game.read().cells.get_host_access(sycl::write_only);
 
       while (!m_clicks.empty()) {
         auto press = m_clicks.back();
@@ -156,7 +155,7 @@ class GameOfLifeSim {
 
       cgh.parallel_for<class gameoflifesimkernel>(
           // Work on each cell in parallel
-          cl::sycl::range<2>(width, height), [=](cl::sycl::item<2> item) {
+          sycl::range<2>(width, height), [=](sycl::item<2> item) {
             size_t x = item.get_id(0);
             size_t y = item.get_id(1);
 
@@ -228,7 +227,7 @@ class GameOfLifeSim {
             new_vel = sycl::fabs(new_vel) * 5.0f + sycl::float2(0.2f, 0.2f);
 
             // Set image pixel to new colour decided by state and "velocity"
-            img[sycl::id<2>(y, x)] = sycl::cl_uchar4(
+            img[sycl::id<2>(y, x)] = sycl::uchar4(
                 float(int(new_state)) * new_vel.x() * 255.0f, 0,
                 float(int(new_state)) * new_vel.y() * 255.0f, 255);
           });

@@ -1,7 +1,9 @@
-add_executable(GameOfLife WIN32 main.cpp
-                                sim.cpp)
+add_executable(GameOfLife main.cpp
+                          sim.cpp)
 
-link_demo_dependencies(TARGET GameOfLife)
+target_link_libraries(GameOfLife PRIVATE
+                                 Magnum::Magnum Magnum::GL Magnum::Application
+                                 Magnum::Shaders Magnum::Primitives)
 
-add_sycl_to_target(TARGET GameOfLife
-                   SOURCES sim.cpp)
+target_compile_options(GameOfLife PUBLIC ${SYCL_FLAGS})
+target_link_options(GameOfLife PUBLIC ${SYCL_FLAGS})
