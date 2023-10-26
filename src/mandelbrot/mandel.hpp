@@ -27,8 +27,10 @@
 
 #include <iostream>
 
-#include <CL/sycl.hpp>
-namespace sycl = cl::sycl;
+#include <sycl/sycl.hpp>
+
+template <typename num_t>
+class CalcKernel;
 
 /* Computes an image representing the Mandelbrot set on the complex
  * plane at a given zoom level. */
@@ -39,7 +41,7 @@ class MandelbrotCalculator {
 
   // Accelerated SYCL queue and storage for image data
   sycl::queue m_q;
-  sycl::buffer<sycl::cl_uchar4, 2> m_img;
+  sycl::buffer<sycl::uchar4, 2> m_img;
 
   // Boundaries on the part of the complex plane which we want to view
   double m_minx = -2;
@@ -53,7 +55,7 @@ class MandelbrotCalculator {
   MandelbrotCalculator(size_t width, size_t height)
       : m_width(width),
         m_height(height),
-        m_q(sycl::default_selector{},
+        m_q(sycl::default_selector_v,
             [&](sycl::exception_list el) {
               for (auto const& e : el) {
                 try {
@@ -89,7 +91,7 @@ class MandelbrotCalculator {
   // Calls the function with the underlying image memory.
   template <typename Func>
   void with_data(Func&& func) {
-    auto acc = m_img.get_access<sycl::access::mode::read>();
+    auto acc = m_img.get_host_access(sycl::read_only);
 
     func(acc.get_pointer());
   }
@@ -98,7 +100,7 @@ class MandelbrotCalculator {
   template <typename num_t>
   void internal_calc() {
     m_q.submit([&](sycl::handler& cgh) {
-      auto img_acc = m_img.get_access<sycl::access::mode::discard_write>(cgh);
+      auto img_acc = m_img.get_access(cgh, sycl::write_only);
 
       static constexpr size_t MAX_ITERS = 500;
       // Anything above this number is assumed divergent. To do less
@@ -141,7 +143,7 @@ class MandelbrotCalculator {
       num_t maxy = m_maxy;
 
       // Use the MandelbrotCalculator class for unique kernel name typ
-      cgh.parallel_for<decltype(this)>(
+      cgh.parallel_for<CalcKernel<num_t>>(
           sycl::range<2>(m_height, m_width), [=](sycl::item<2> item) {
             // Obtain normalized coords [0, 1]
             num_t x = num_t(item.get_id(1)) / num_t(width);
