@@ -20,3 +20,4 @@ include(cmake/ConfigureSYCL.cmake)
 
 # Configure the demo projects
 add_subdirectory(src/mandelbrot)
+add_subdirectory(src/game_of_life)

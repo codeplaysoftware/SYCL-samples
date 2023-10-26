@@ -25,29 +25,31 @@
  *
  **************************************************************************/
 
-#include <cinder/CameraUi.h>
-#include <cinder/TriMesh.h>
-#include <cinder/app/App.h>
-#include <cinder/app/RendererGl.h>
-#include <cinder/gl/gl.h>
-
-#include <CL/sycl.hpp>
-namespace sycl = cl::sycl;
-
-#include <codeplay_demo.hpp>
-
 #include "sim.hpp"
 
-class GameOfLifeApp
-#ifdef CODEPLAY_DRAW_LOGO
-    : public CodeplayDemoApp
-#else
-    : public ci::app::App
-#endif
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureFormat.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/ImageView.h>
+#include <Magnum/Shaders/FlatGL.h>
+#include <Magnum/Primitives/Square.h>
+#include <Magnum/MeshTools/Compile.h>
+#include <Magnum/Trade/MeshData.h>
+
+#include <sycl/sycl.hpp>
+#include <thread>
+#include <chrono>
+
+constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
+
+class GameOfLifeApp : public Magnum::Platform::Application
 {
   /// The window dimensions
-  size_t m_width;
-  size_t m_height;
+  int m_width;
+  int m_height;
   float m_zoom;
 
   /// Things to do with resizing the window. Have to be done to make it smooth.
@@ -58,8 +60,8 @@ class GameOfLifeApp
   /// Whether a resize has been executed
   size_t m_resized = false;
   /// Dimensions after the resize
-  size_t m_resized_width;
-  size_t m_resized_height;
+  int m_resized_width;
+  int m_resized_height;
 
   /// Whether the simulation is running or paused
   bool m_paused = false;
@@ -68,24 +70,39 @@ class GameOfLifeApp
   GameOfLifeSim m_sim;
 
   /// The texture to display the simulation on
-  ci::gl::Texture2dRef m_tex;
+  Magnum::GL::Texture2D m_tex;
+
+  // Mesh and shader to draw the texture
+  Magnum::GL::Mesh m_mesh;
+  Magnum::Shaders::FlatGL2D m_shader;
 
  public:
-  GameOfLifeApp()
-      : m_width(getWindow()->getWidth()),
-        m_height(getWindow()->getHeight()),
-        m_zoom(1),
-        m_sim(m_width, m_height) {}
+  GameOfLifeApp(const Arguments& arguments)
+  : Magnum::Platform::Application{
+      arguments,
+      Configuration{}.setTitle("Codeplay Game of Life Demo")
+                     .addWindowFlags(Configuration::WindowFlag::Resizable),
+      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
+    m_width(windowSize().x()),
+    m_height(windowSize().y()),
+    m_zoom(1),
+    m_resized_width{m_width},
+    m_resized_height{m_height},
+    m_sim(m_width, m_height),
+    m_mesh{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
+      Magnum::Primitives::SquareFlag::TextureCoordinates))},
+    m_shader{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
+      Magnum::Shaders::FlatGL2D::Flag::Textured |
+      Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
 
-  void setup() override {
-    // Initializes image data
-    m_tex = ci::gl::Texture2d::create(nullptr, GL_RGBA, m_width, m_height,
-                                      ci::gl::Texture2d::Format()
-                                          .dataType(GL_UNSIGNED_BYTE)
-                                          .internalFormat(GL_RGBA));
+    m_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
+         .setMagnificationFilter(Magnum::GL::SamplerFilter::Nearest)
+         .setMinificationFilter(Magnum::GL::SamplerFilter::Nearest)
+         .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {m_width,m_height});
+    m_shader.bindTexture(m_tex);
   }
 
-  void update() override {
+  void tickEvent() override {
     if (m_resized) {
       if (m_resize_time++ >= RESIZE_TIMEOUT) {
         m_width = m_resized_width / m_zoom;
@@ -93,11 +110,12 @@ class GameOfLifeApp
 
         m_sim = GameOfLifeSim(m_width, m_height);
         // Reinitializes image to new size
-        m_tex = ci::gl::Texture2d::create(nullptr, GL_RGBA, m_width, m_height,
-                                          ci::gl::Texture2d::Format()
-                                              .dataType(GL_UNSIGNED_BYTE)
-                                              .internalFormat(GL_RGBA));
-        m_tex->setMagFilter(GL_NEAREST);
+        m_tex = Magnum::GL::Texture2D{};
+        m_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
+             .setMagnificationFilter(Magnum::GL::SamplerFilter::Nearest)
+             .setMinificationFilter(Magnum::GL::SamplerFilter::Nearest)
+             .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {m_width,m_height});
+        m_shader.bindTexture(m_tex);
 
         m_resized = false;
         m_resize_time = 0;
@@ -111,31 +129,34 @@ class GameOfLifeApp
     }
   }
 
-  void draw() override {
-    ci::gl::clear();
+  void drawEvent() override {
+    Magnum::GL::defaultFramebuffer.clear(
+        Magnum::GL::FramebufferClear::Color |
+        Magnum::GL::FramebufferClear::Depth);
 
     m_sim.with_img(
         // Gets called with image data
-        [&](sycl::cl_uchar4 const* data) {
-          this->m_tex->update(data, GL_RGBA, GL_UNSIGNED_BYTE, 0, m_width,
-                              m_height);
+        [&](sycl::uchar4 const* data) {
+          Magnum::ImageView2D img{
+            PIXELFORMAT, {m_width, m_height},
+            Corrade::Containers::ArrayView{
+              reinterpret_cast<const char*>(data),
+              m_width*m_height*Magnum::pixelFormatSize(PIXELFORMAT)}};
+          m_tex.setSubImage(0, {0,0}, img);
         });
 
-    ci::Rectf screen(0, 0, getWindow()->getWidth(), getWindow()->getHeight());
-    ci::gl::draw(this->m_tex, screen);
-
-#ifdef CODEPLAY_DRAW_LOGO
-    draw_codeplay_logo();
-#endif
+    m_shader.draw(m_mesh);
+    redraw();
+    swapBuffers();
   }
 
   void handleMouse(size_t mouse_x, size_t mouse_y) {
     // Obtain coordinates within the simulation dimensions
     size_t x = static_cast<float>(mouse_x) /
-               static_cast<float>(getWindow()->getWidth()) *
+               static_cast<float>(windowSize().x()) *
                static_cast<float>(m_width);
     size_t y = static_cast<float>(mouse_y) /
-               static_cast<float>(getWindow()->getHeight()) *
+               static_cast<float>(windowSize().y()) *
                static_cast<float>(m_height);
     // Invert Y
     y = m_height - y;
@@ -148,16 +169,20 @@ class GameOfLifeApp
     }    
   }
 
-  void mouseDown(ci::app::MouseEvent event) override {
-    handleMouse(event.getX(), event.getY());
+  void mousePressEvent(MouseEvent& event) override {
+    handleMouse(event.position().x(), event.position().y());
   }
 
-  void mouseDrag(ci::app::MouseEvent event) override {
-    handleMouse(event.getX(), event.getY());
+  void mouseMoveEvent(MouseMoveEvent& event) override {
+    // Drag only if left button clicked
+    if ((event.buttons() & MouseMoveEvent::Button::Left)) {
+      handleMouse(event.position().x(), event.position().y());
+    }
   }
 
-  void mouseWheel(ci::app::MouseEvent event) override {
-    auto inc = event.getWheelIncrement();
+  void mouseScrollEvent(MouseScrollEvent& event) override {
+    auto prevZoom = m_zoom;
+    auto inc = event.offset().y();
     if (inc > 0) {
       // Zoom in on wheel up
       m_zoom *= 2.0f * inc;
@@ -169,22 +194,22 @@ class GameOfLifeApp
     m_zoom = sycl::clamp(m_zoom, 1.0f, 64.0f);
 
     // Restart after zooming
-    m_resized = true;
+    if (m_zoom!=prevZoom) {m_resized = true;}
   }
 
-  void keyDown(ci::app::KeyEvent event) override {
+  void keyPressEvent(KeyEvent& event) override {
     // (Un)pause on SPACE
-    if (event.getCode() == ci::app::KeyEvent::KEY_SPACE) {
+    if (event.key() == KeyEvent::Key::Space) {
       m_paused = !m_paused;
     }
   }
 
-  void resize() override {
-    auto const& win = getWindow();
-    m_resized_width = win->getWidth();
-    m_resized_height = win->getHeight();
+  void viewportEvent(ViewportEvent& event) override {
+    m_resized_width = event.windowSize().x();
+    m_resized_height = event.windowSize().y();
     m_resized = true;
+    Magnum::GL::defaultFramebuffer.setViewport({{0,0}, event.framebufferSize()});
   }
 };
 
-CINDER_APP(GameOfLifeApp, ci::app::RendererGl(ci::app::RendererGl::Options{}))
+MAGNUM_APPLICATION_MAIN(GameOfLifeApp)
