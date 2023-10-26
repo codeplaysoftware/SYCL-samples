@@ -1,0 +1,10 @@
+[submodule "modules/corrade"]
+	path = modules/corrade
+	url = https://github.com/mosra/corrade.git
+[submodule "modules/magnum"]
+	path = modules/magnum
+	url = https://github.com/mosra/magnum.git
+[submodule "modules/magnum-bootstrap"]
+	path = modules/magnum-bootstrap
+	url = https://github.com/mosra/magnum-bootstrap.git
+	branch = base

@@ -23,36 +23,39 @@
  *
  **************************************************************************/
 
-#include <iostream>
-
-#include <cinder/CameraUi.h>
-#include <cinder/TriMesh.h>
-#include <cinder/app/App.h>
-#include <cinder/app/RendererGl.h>
-#include <cinder/gl/gl.h>
-
-#include <CL/sycl.hpp>
-namespace sycl = cl::sycl;
-
-#include <codeplay_demo.hpp>
 
 #include "mandel.hpp"
 
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureFormat.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/ImageView.h>
+#include <Magnum/Shaders/FlatGL.h>
+#include <Magnum/Primitives/Square.h>
+#include <Magnum/MeshTools/Compile.h>
+#include <Magnum/Trade/MeshData.h>
+
+#include <sycl/sycl.hpp>
+
 constexpr size_t WIDTH = 800;
 constexpr size_t HEIGHT = 600;
+constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
+const size_t PIXELDATASIZE{WIDTH*HEIGHT*Magnum::pixelFormatSize(PIXELFORMAT)};
 
-class MandelbrotApp
-#ifdef CODEPLAY_DRAW_LOGO
-    : public CodeplayDemoApp
-#else
-    : public ci::app::App
-#endif
+class MandelbrotApp : public Magnum::Platform::Application
 {
   // Use doubles for more zoom
   MandelbrotCalculator m_calc;
 
   // Texture for displaying the set
-  ci::gl::Texture2dRef m_tex;
+  Magnum::GL::Texture2D m_tex;
+
+  // Mesh and shader to draw the texture
+  Magnum::GL::Mesh m_mesh;
+  Magnum::Shaders::FlatGL2D m_shader;
 
   // Coordinates of the center point
   double m_ctr_x = 0;
@@ -66,16 +69,26 @@ class MandelbrotApp
   double m_prev_my = 0;
 
  public:
-  MandelbrotApp() : m_calc(WIDTH, HEIGHT) {}
+  MandelbrotApp(const Arguments& arguments)
+  : Magnum::Platform::Application{
+      arguments,
+      Configuration{}.setTitle("Codeplay Mandelbrot Demo"),
+      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
+    m_calc{WIDTH, HEIGHT},
+    m_mesh{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
+      Magnum::Primitives::SquareFlag::TextureCoordinates))},
+    m_shader{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
+      Magnum::Shaders::FlatGL2D::Flag::Textured |
+      Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
 
-  void setup() override {
-    this->m_tex = ci::gl::Texture2d::create(nullptr, GL_RGBA, WIDTH, HEIGHT,
-                                            ci::gl::Texture2d::Format()
-                                                .dataType(GL_UNSIGNED_BYTE)
-                                                .internalFormat(GL_RGBA));
+    m_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
+          .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
+          .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
+          .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {WIDTH,HEIGHT});
+    m_shader.bindTexture(m_tex);
   }
 
-  void update() override {
+  void tickEvent() override {
     // Transform coordinates from the ones used here - center point
     // and range - to the ones used in MandelbrotCalculator - min and max X, Y.
     double range_x = m_range * double(WIDTH) / double(HEIGHT);
@@ -95,25 +108,27 @@ class MandelbrotApp
     }
   }
 
-  void draw() override {
-    ci::gl::clear();
+  void drawEvent() override {
+    Magnum::GL::defaultFramebuffer.clear(
+        Magnum::GL::FramebufferClear::Color |
+        Magnum::GL::FramebufferClear::Depth);
 
     // Update GL texture with new calculation data
-    m_calc.with_data([&](sycl::cl_uchar4 const* data) {
-      this->m_tex->update(data, GL_RGBA, GL_UNSIGNED_BYTE, 0, WIDTH, HEIGHT);
+    m_calc.with_data([&](sycl::uchar4 const* data) {
+      Magnum::ImageView2D img{
+        PIXELFORMAT, {WIDTH,HEIGHT},
+        Corrade::Containers::ArrayView{reinterpret_cast<const char*>(data), PIXELDATASIZE}};
+      m_tex.setSubImage(0, {0,0}, img);
     });
 
-    ci::Rectf screen(0, 0, getWindow()->getWidth(), getWindow()->getHeight());
-    ci::gl::draw(m_tex, screen);
-
-#ifdef CODEPLAY_DRAW_LOGO
-    draw_codeplay_logo();
-#endif
+    m_shader.draw(m_mesh);
+    redraw();
+    swapBuffers();
   }
 
-  void mouseWheel(ci::app::MouseEvent event) override {
+  void mouseScrollEvent(MouseScrollEvent& event) override {
     // Zoom in or out on the plane
-    auto inc = event.getWheelIncrement();
+    auto inc = event.offset().y();
     if (inc > 0) {
       m_range *= 0.5f * inc;
     } else {
@@ -121,10 +136,14 @@ class MandelbrotApp
     }
   }
 
-  void mouseDrag(ci::app::MouseEvent event) override {
+  void mouseMoveEvent(MouseMoveEvent& event) override {
+    // Drag only if left button clicked
+    if (!(event.buttons() & MouseMoveEvent::Button::Left)) {
+      return;
+    }
     // Calculate normalized coordinates
-    auto x = event.getX() / double(WIDTH);
-    auto y = event.getY() / double(HEIGHT);
+    auto x = event.position().x() / double(WIDTH);
+    auto y = event.position().y() / double(HEIGHT);
 
     // Find the difference from last click
     auto dx = m_prev_mx - x;
@@ -147,4 +166,4 @@ class MandelbrotApp
   }
 };
 
-CINDER_APP(MandelbrotApp, ci::app::RendererGl(ci::app::RendererGl::Options{}))
+MAGNUM_APPLICATION_MAIN(MandelbrotApp)

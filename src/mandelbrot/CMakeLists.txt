@@ -1,9 +1,10 @@
-add_executable(Mandelbrot WIN32 main.cpp
-                                mandel-float.cpp
-                                mandel-double.cpp)
+add_executable(Mandelbrot main.cpp
+                          mandel-float.cpp
+                          mandel-double.cpp)
 
-link_demo_dependencies(TARGET Mandelbrot)
+target_link_libraries(Mandelbrot PRIVATE
+                                 Magnum::Magnum Magnum::GL Magnum::Application
+                                 Magnum::Shaders Magnum::Primitives)
 
-add_sycl_to_target(TARGET Mandelbrot
-                   SOURCES mandel-float.cpp
-                           mandel-double.cpp)
+target_compile_options(Mandelbrot PUBLIC ${SYCL_FLAGS})
+target_link_options(Mandelbrot PUBLIC ${SYCL_FLAGS})
