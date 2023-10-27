@@ -1,7 +1,9 @@
-add_executable(FluidSimulation WIN32 main.cpp
-                                     fluid.cpp)
+add_executable(FluidSimulation main.cpp
+                               fluid.cpp)
 
-link_demo_dependencies(TARGET FluidSimulation)
+target_link_libraries(FluidSimulation PRIVATE
+                                      Magnum::Magnum Magnum::GL Magnum::Application
+                                      Magnum::Shaders Magnum::Primitives)
 
-add_sycl_to_target(TARGET FluidSimulation
-                   SOURCES fluid.cpp)
+target_compile_options(FluidSimulation PUBLIC ${SYCL_FLAGS})
+target_link_options(FluidSimulation PUBLIC ${SYCL_FLAGS})

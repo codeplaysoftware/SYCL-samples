@@ -23,14 +23,23 @@
  *
  **************************************************************************/
 
-#include <cinder/CameraUi.h>
-#include <cinder/app/App.h>
-#include <cinder/app/RendererGl.h>
-#include <cinder/gl/gl.h>
-
-#include <CL/sycl.hpp>
-
 #include "fluid.h"
+
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureFormat.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/ImageView.h>
+#include <Magnum/Shaders/FlatGL.h>
+#include <Magnum/Primitives/Square.h>
+#include <Magnum/MeshTools/Compile.h>
+#include <Magnum/Trade/MeshData.h>
+
+#include <sycl/sycl.hpp>
+
+constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
 
 // Size of the fluid container edge (always square shaped).
 constexpr int SIZE{300};
@@ -38,27 +47,35 @@ constexpr int SIZE{300};
 // Default scale at which fluid container is rendered.
 constexpr int SCALE{3};
 
-class FluidSimulationApp : public ci::app::App {
+class FluidSimulationApp : public Magnum::Platform::Application {
  public:
-  FluidSimulationApp() : size_{SIZE}, fluid_{SIZE, 0.2f, 0.0f, 0.0000001f} {
-    // Set window size.
-    getWindow()->setSize({size_ * SCALE, size_ * SCALE});
-    // Add usage instruction to application title
-    getWindow()->setTitle(
-        "Fluid Simulation - Move mouse to add fluid - Press space to clear "
-        "fluid");
-  }
+  FluidSimulationApp(const Arguments& arguments)
+  : Magnum::Platform::Application{
+      arguments,
+      Configuration{}.setTitle("Codeplay Fluid Simulation"
+        " - Move mouse to add fluid - Press space to clear fluid"),
+      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
+    size_{SIZE},
+    fluid_{SIZE, 0.2f, 0.0f, 0.0000001f},
+    mesh_{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
+      Magnum::Primitives::SquareFlag::TextureCoordinates))},
+    shader_{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
+      Magnum::Shaders::FlatGL2D::Flag::Textured |
+      Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
 
-  // Create fluid texture.
-  void setup() override final {
-    texture_ = ci::gl::Texture2d::create(nullptr, GL_RGBA, size_, size_,
-                                         ci::gl::Texture2d::Format()
-                                             .dataType(GL_UNSIGNED_BYTE)
-                                             .internalFormat(GL_RGBA));
+    // Set window size.
+    setWindowSize({SIZE*SCALE, SIZE*SCALE});
+    Magnum::GL::defaultFramebuffer.setViewport({{0,0},{SIZE*SCALE, SIZE*SCALE}});
+
+    texture_.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
+            .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
+            .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
+            .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {size_, size_});
+    shader_.bindTexture(texture_);
   }
 
   // Called once per frame to update the fluid.
-  void update() override final {
+  void tickEvent() override final {
     // Check that mouse has moved.
     if (prev_x != 0 && prev_x != 0) {
       // Add density at mouse cursor location.
@@ -75,36 +92,40 @@ class FluidSimulationApp : public ci::app::App {
   }
 
   // Draws fluid to the screen.
-  void draw() override final {
+  void drawEvent() override final {
     // Clear screen.
-    ci::gl::clear();
+    Magnum::GL::defaultFramebuffer.clear(
+        Magnum::GL::FramebufferClear::Color |
+        Magnum::GL::FramebufferClear::Depth);
 
     // Update texture with pixel data array.
-    fluid_.WithData([&](cl::sycl::cl_uchar4 const* data) {
-      texture_->update(data, GL_RGBA, GL_UNSIGNED_BYTE, 0, size_, size_);
+    fluid_.WithData([&](sycl::uchar4 const* data) {
+          Magnum::ImageView2D img{
+            PIXELFORMAT, {size_, size_},
+            Corrade::Containers::ArrayView{
+              reinterpret_cast<const char*>(data),
+              size_*size_*Magnum::pixelFormatSize(PIXELFORMAT)}};
+          texture_.setSubImage(0, {0,0}, img);
     });
 
     // Draw texture to screen.
-    ci::Rectf screen(0.0f, 0.0f, static_cast<float>(getWindow()->getWidth()),
-                     static_cast<float>(getWindow()->getHeight()));
-    ci::gl::draw(texture_, screen);
+    shader_.draw(mesh_);
+    redraw();
+    swapBuffers();
   }
 
  private:
-  void keyDown(ci::app::KeyEvent event) override final {
+  void keyPressEvent(KeyEvent& event) override final {
     // Reset fluid container to empty if SPACE key is pressed.
-    if (event.getCode() == ci::app::KeyEvent::KEY_SPACE) {
+    if (event.key() == KeyEvent::Key::Space) {
       fluid_.Reset();
     }
   }
 
-  // Dragging mouse does not include moving mouse so defined separately here.
-  void mouseDrag(ci::app::MouseEvent event) override final { mouseMove(event); }
-
-  void mouseMove(ci::app::MouseEvent event) override final {
+  void mouseMoveEvent(MouseMoveEvent& event) override final {
     // Get mouse position as fraction of window size.
-    auto x{event.getX() / float(getWindow()->getSize().x)};
-    auto y{1.0f - event.getY() / float(getWindow()->getSize().y)};
+    auto x{event.position().x() / float(windowSize().x())};
+    auto y{1.0f - event.position().y() / float(windowSize().y())};
     // Check that previous mouse position was not only zero (for initial value
     // to be set).
     if (prev_x != 0.0 || prev_y != 0.0) {
@@ -134,9 +155,12 @@ class FluidSimulationApp : public ci::app::App {
   SYCLFluidContainer fluid_;
 
   // Fluid texture.
-  ci::gl::Texture2dRef texture_;
+  Magnum::GL::Texture2D texture_;
+
+  // Mesh and shader to draw the texture.
+  Magnum::GL::Mesh mesh_;
+  Magnum::Shaders::FlatGL2D shader_;
 };
 
-// Cinder app initialization.
-CINDER_APP(FluidSimulationApp,
-           ci::app::RendererGl(ci::app::RendererGl::Options{}));
+// Magnum app initialization.
+MAGNUM_APPLICATION_MAIN(FluidSimulationApp)

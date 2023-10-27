@@ -32,8 +32,7 @@
 #include <iostream>   // std::cout, std::endl
 #include <vector>     // std::vector
 
-
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 
 // Kernel declarations.
 class fluid_boundary;
@@ -52,15 +51,15 @@ class SYCLFluidContainer {
         diffusion{diffusion},
         viscosity{viscosity},
         // Create an image buffer.
-        img{cl::sycl::range<1>(size * size)},
+        img{sycl::range<1>(size * size)},
         // Initialize queue with default selector and asynchronous exception
         // handler.
-        queue{cl::sycl::default_selector{},
-              [](cl::sycl::exception_list exceptions) {
+        queue{sycl::default_selector_v,
+              [](sycl::exception_list exceptions) {
                 for (const std::exception_ptr& e : exceptions) {
                   try {
                     std::rethrow_exception(e);
-                  } catch (const cl::sycl::exception& e) {
+                  } catch (const sycl::exception& e) {
                     std::cout << "Caught asynchronous SYCL exception:\n"
                               << e.what() << std::endl;
                   }
@@ -87,7 +86,7 @@ class SYCLFluidContainer {
   // Returns a pointer to the pixel data buffer.
   template <typename Func>
   void WithData(Func&& func) {
-    auto acc{img.template get_access<cl::sycl::access::mode::read>()};
+    auto acc{img.template get_host_access(sycl::read_only)};
     func(acc.get_pointer());
   }
 
@@ -158,27 +157,27 @@ class SYCLFluidContainer {
          ++iteration) {
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto x_a, auto px_a) {
+          [&](sycl::handler& cgh, auto x_a, auto px_a) {
             LinearSolve(1, px_a, x_a, a_velocity, c_reciprocal_velocity, size,
                         cgh);
           },
           x_b, px_b);
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto y_a, auto py_a) {
+          [&](sycl::handler& cgh, auto y_a, auto py_a) {
             LinearSolve(2, py_a, y_a, a_velocity, c_reciprocal_velocity, size,
                         cgh);
           },
           y_b, py_b);
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto px_a) {
+          [&](sycl::handler& cgh, auto px_a) {
             SetBoundaryConditions(1, px_a, size, cgh);
           },
           px_b);
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto py_a) {
+          [&](sycl::handler& cgh, auto py_a) {
             SetBoundaryConditions(2, py_a, size, cgh);
           },
           py_b);
@@ -195,14 +194,14 @@ class SYCLFluidContainer {
          ++iteration) {
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto previous_density_a, auto density_a) {
+          [&](sycl::handler& cgh, auto previous_density_a, auto density_a) {
             LinearSolve(0, previous_density_a, density_a, a_density,
                         c_reciprocal_density, size, cgh);
           },
           previous_density_b, density_b);
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto previous_density_a) {
+          [&](sycl::handler& cgh, auto previous_density_a) {
             SetBoundaryConditions(0, previous_density_a, size, cgh);
           },
           previous_density_b);
@@ -213,13 +212,13 @@ class SYCLFluidContainer {
 
     // Update the image pixel data with the appropriate color for a given
     // density.
-    queue.submit([&](cl::sycl::handler& cgh) {
+    queue.submit([&](sycl::handler& cgh) {
       auto img_acc{
-          img.template get_access<cl::sycl::access::mode::discard_write>(cgh)};
+          img.template get_access(cgh, sycl::write_only)};
       auto density_a{
-          density_b.template get_access<cl::sycl::access::mode::read>(cgh)};
+          density_b.template get_access(cgh, sycl::read_write)};
       cgh.parallel_for<image_kernal>(
-          cl::sycl::range<1>(size * size), [=](cl::sycl::item<1> item) {
+          sycl::range<1>(size * size), [=](sycl::item<1> item) {
             auto index{item.get_id(0)};
             auto value{density_a[index]};
             std::uint8_t red =
@@ -232,24 +231,24 @@ class SYCLFluidContainer {
   }
 
   // Some aliases to improve readability of code.
-  using float_buffer = cl::sycl::buffer<float, 1>;
+  using float_buffer = sycl::buffer<float, 1>;
   using read_write_accessor =
-      cl::sycl::accessor<float, 1, cl::sycl::access::mode::read_write,
-                         cl::sycl::access::target::global_buffer,
-                         cl::sycl::access::placeholder::false_t>;
+      sycl::accessor<float, 1, sycl::access::mode::read_write,
+                         sycl::access::target::device,
+                         sycl::access::placeholder::false_t>;
 
   // Wrapper around queue submission.
   template <typename T, typename... Ts>
-  static void Submit(cl::sycl::queue& queue, T lambda, Ts&... buffers) {
-    queue.submit([&](cl::sycl::handler& cgh) {
+  static void Submit(sycl::queue& queue, T lambda, Ts&... buffers) {
+    queue.submit([&](sycl::handler& cgh) {
       lambda(cgh, CreateAccessor(cgh, buffers)...);
     });
   }
 
   // Creates read_write accessors from a buffer.
   template <typename T>
-  static read_write_accessor CreateAccessor(cl::sycl::handler& cgh, T buffer) {
-    return buffer.template get_access<cl::sycl::access::mode::read_write>(cgh);
+  static read_write_accessor CreateAccessor(sycl::handler& cgh, T buffer) {
+    return buffer.template get_access(cgh, sycl::read_write);
   }
 
   // Get clamped index based off of coordinates.
@@ -273,7 +272,7 @@ class SYCLFluidContainer {
 
   // Set boundaries to opposite of adjacent layer. (SYCL VERSION).
   static void SetBoundaryConditions(int b, read_write_accessor x, std::size_t N,
-                                    cl::sycl::handler& cgh) {
+                                    sycl::handler& cgh) {
     cgh.single_task<fluid_boundary>([=]() {
       for (std::size_t i{1}; i < N - 1; ++i) {
         auto top{IX(i, 1, N)};
@@ -305,9 +304,9 @@ class SYCLFluidContainer {
   // Solve linear differential equation of density / velocity. (SYCL VERSION).
   static void LinearSolve(int b, read_write_accessor x, read_write_accessor x0,
                           float a, float c_reciprocal, std::size_t N,
-                          cl::sycl::handler& cgh) {
+                          sycl::handler& cgh) {
     cgh.parallel_for<fluid_linear_solve>(
-        cl::sycl::range<2>(N - 2, N - 2), [=](cl::sycl::item<2> item) {
+        sycl::range<2>(N - 2, N - 2), [=](sycl::item<2> item) {
           auto i{1 + item.get_id(0)};
           auto j{1 + item.get_id(1)};
           auto index{IX(i, j, N)};
@@ -321,9 +320,9 @@ class SYCLFluidContainer {
   // Converse 'mass' of density / velocity fields. (SYCL VERSION part 1).
   static void Project1(read_write_accessor vx, read_write_accessor vy,
                        read_write_accessor p, read_write_accessor div,
-                       std::size_t N, cl::sycl::handler& cgh) {
+                       std::size_t N, sycl::handler& cgh) {
     cgh.parallel_for<fluid_project1>(
-        cl::sycl::range<2>(N - 2, N - 2), [=](cl::sycl::item<2> item) {
+        sycl::range<2>(N - 2, N - 2), [=](sycl::item<2> item) {
           auto i{1 + item.get_id(0)};
           auto j{1 + item.get_id(1)};
           auto index{IX(i, j, N)};
@@ -338,9 +337,9 @@ class SYCLFluidContainer {
   // Converse 'mass' of density / velocity fields. (SYCL VERSION part 2).
   static void Project2(read_write_accessor vx, read_write_accessor vy,
                        read_write_accessor p, std::size_t N,
-                       cl::sycl::handler& cgh) {
+                       sycl::handler& cgh) {
     cgh.parallel_for<fluid_project2>(
-        cl::sycl::range<2>(N - 2, N - 2), [=](cl::sycl::item<2> item) {
+        sycl::range<2>(N - 2, N - 2), [=](sycl::item<2> item) {
           auto i{1 + item.get_id(0)};
           auto j{1 + item.get_id(1)};
           auto index{IX(i, j, N)};
@@ -353,20 +352,20 @@ class SYCLFluidContainer {
                float_buffer& y_b) {
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto x_a, auto px_a, auto y_a, auto py_a) {
+        [&](sycl::handler& cgh, auto x_a, auto px_a, auto y_a, auto py_a) {
           Project1(px_a, py_a, x_a, y_a, size, cgh);
         },
         x_b, px_b, y_b, py_b);
 
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto x_a) {
+        [&](sycl::handler& cgh, auto x_a) {
           SetBoundaryConditions(0, x_a, size, cgh);
         },
         x_b);
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto y_a) {
+        [&](sycl::handler& cgh, auto y_a) {
           SetBoundaryConditions(0, y_a, size, cgh);
         },
         y_b);
@@ -375,13 +374,13 @@ class SYCLFluidContainer {
          ++iteration) {
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto x_a, auto y_a) {
+          [&](sycl::handler& cgh, auto x_a, auto y_a) {
             LinearSolve(0, x_a, y_a, 1.0f, c_reciprocal_project, size, cgh);
           },
           x_b, y_b);
       Submit(
           queue,
-          [&](cl::sycl::handler& cgh, auto x_a) {
+          [&](sycl::handler& cgh, auto x_a) {
             SetBoundaryConditions(0, x_a, size, cgh);
           },
           x_b);
@@ -389,19 +388,19 @@ class SYCLFluidContainer {
 
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto x_a, auto px_a, auto py_a) {
+        [&](sycl::handler& cgh, auto x_a, auto px_a, auto py_a) {
           Project2(px_a, py_a, x_a, size, cgh);
         },
         x_b, px_b, py_b);
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto px_a) {
+        [&](sycl::handler& cgh, auto px_a) {
           SetBoundaryConditions(1, px_a, size, cgh);
         },
         px_b);
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto py_a) {
+        [&](sycl::handler& cgh, auto py_a) {
           SetBoundaryConditions(2, py_a, size, cgh);
         },
         py_b);
@@ -410,18 +409,18 @@ class SYCLFluidContainer {
   // Move density / velocity within the field to the next step. (SYCL VERSION).
   static void AdvectImpl(int b, read_write_accessor d, read_write_accessor d0,
                          read_write_accessor u, read_write_accessor v,
-                         float dt0, std::size_t N, cl::sycl::handler& cgh) {
+                         float dt0, std::size_t N, sycl::handler& cgh) {
     cgh.parallel_for<fluid_advect>(
-        cl::sycl::range<2>(N - 2, N - 2), [=](cl::sycl::item<2> item) {
+        sycl::range<2>(N - 2, N - 2), [=](sycl::item<2> item) {
           auto i{1 + item.get_id(0)};
           auto j{1 + item.get_id(1)};
           auto index{IX(i, j, N)};
           float x{i - dt0 * u[index]};
           float y{j - dt0 * v[index]};
-          x = cl::sycl::clamp(x, 0.5f, N + 0.5f);
+          x = sycl::clamp(x, 0.5f, N + 0.5f);
           auto i0{(int)x};
           auto i1{i0 + 1};
-          y = cl::sycl::clamp(y, 0.5f, N + 0.5f);
+          y = sycl::clamp(y, 0.5f, N + 0.5f);
           auto j0{(int)y};
           auto j1{j0 + 1};
           float s1{x - i0};
@@ -437,13 +436,13 @@ class SYCLFluidContainer {
               float_buffer& v) {
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto d_a, auto d0_a, auto u_a, auto v_a) {
+        [&](sycl::handler& cgh, auto d_a, auto d0_a, auto u_a, auto v_a) {
           AdvectImpl(b, d_a, d0_a, u_a, v_a, dt0, size, cgh);
         },
         d, d0, u, v);
     Submit(
         queue,
-        [&](cl::sycl::handler& cgh, auto d_a) {
+        [&](sycl::handler& cgh, auto d_a) {
           SetBoundaryConditions(b, d_a, size, cgh);
         },
         d);
@@ -478,7 +477,7 @@ class SYCLFluidContainer {
   std::vector<float> density;
 
   // SYCL objects.
-  cl::sycl::property_list props{cl::sycl::property::buffer::use_host_ptr()};
-  cl::sycl::queue queue;
-  cl::sycl::buffer<cl::sycl::cl_uchar4, 1> img;
+  sycl::property_list props{sycl::property::buffer::use_host_ptr()};
+  sycl::queue queue;
+  sycl::buffer<sycl::uchar4, 1> img;
 };

@@ -19,5 +19,6 @@ find_package(Magnum REQUIRED GL Sdl2Application Shaders Primitives)
 include(cmake/ConfigureSYCL.cmake)
 
 # Configure the demo projects
-add_subdirectory(src/mandelbrot)
+add_subdirectory(src/fluid)
 add_subdirectory(src/game_of_life)
+add_subdirectory(src/mandelbrot)
