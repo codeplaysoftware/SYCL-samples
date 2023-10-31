@@ -1,11 +1,14 @@
-add_executable(NBody WIN32 main.cpp
-                           sim.cpp)
+corrade_add_resource(NBody_RESOURCES assets/resources.conf)
 
-link_demo_dependencies(TARGET NBody)
+add_executable(NBody main.cpp
+                     sim.cpp
+                     ${NBody_RESOURCES})
 
-# Copy the assets folder to the binary folder so the program can load it.
-add_custom_command(TARGET NBody POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets)
+target_link_libraries(NBody PRIVATE
+                            Magnum::Magnum Magnum::GL Magnum::Application
+                            Magnum::Shaders Magnum::Primitives
+                            MagnumIntegration::ImGui)
+add_dependencies(NBody Magnum::AnyImageImporter MagnumPlugins::StbImageImporter)
 
-add_sycl_to_target(TARGET  NBody
-                   SOURCES sim.cpp)
+target_compile_options(NBody PUBLIC ${SYCL_FLAGS})
+target_link_options(NBody PUBLIC ${SYCL_FLAGS})

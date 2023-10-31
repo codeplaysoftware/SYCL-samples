@@ -8,3 +8,12 @@
 	path = modules/magnum-bootstrap
 	url = https://github.com/mosra/magnum-bootstrap.git
 	branch = base
+[submodule "modules/magnum-plugins"]
+	path = modules/magnum-plugins
+	url = https://github.com/mosra/magnum-plugins.git
+[submodule "modules/imgui"]
+	path = modules/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "modules/magnum-integration"]
+	path = modules/magnum-integration
+	url = https://github.com/mosra/magnum-integration.git

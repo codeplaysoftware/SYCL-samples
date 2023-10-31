@@ -29,7 +29,7 @@
 
 #include <type_traits>
 
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 
 #include "tuple_utils.hpp"
 
@@ -40,8 +40,8 @@ struct BufToReadAccFunc {
       // pair of (buffer, handler)
       operator()(In&& in),
       std::forward<In>(in)
-          .first.template get_access<cl::sycl::access::mode::read>(
-              *std::forward<In>(in).second))
+          .first.template get_access(*std::forward<In>(in).second,
+                                     sycl::read_only))
 };
 
 // Template function object which transforms buffers to device write accessors
@@ -51,8 +51,8 @@ struct BufToDcdWriteAccFunc {
   AUTO_FUNC(operator()(In&& in),
             std::forward<In>(in)
                 .first
-                .template get_access<cl::sycl::access::mode::discard_write>(
-                    *std::forward<In>(in).second))
+                .template get_access(*std::forward<In>(in).second,
+                                     sycl::write_only))
 };
 
 // Template function object which transforms buffers to host read accessors
@@ -60,9 +60,9 @@ struct BufToHostReadAccFunc {
   template <typename In>
   auto operator()(In&& in)
       -> decltype(std::forward<In>(in)
-                      .template get_access<cl::sycl::access::mode::read>()) {
+                      .template get_host_access(sycl::read_only)) {
     return std::forward<In>(in)
-        .template get_access<cl::sycl::access::mode::read>();
+        .template get_host_access(sycl::read_only);
   }
 };
 
@@ -71,9 +71,9 @@ struct BufToHostDcdWriteAccFunc {
   template <typename In>
   auto operator()(In&& in) -> decltype(
       std::forward<In>(in)
-          .template get_access<cl::sycl::access::mode::discard_write>()) {
+          .template get_host_access(sycl::write_only)) {
     return std::forward<In>(in)
-        .template get_access<cl::sycl::access::mode::discard_write>();
+        .template get_host_access(sycl::write_only);
   }
 };
 
@@ -88,27 +88,27 @@ struct write_bufs_t {};
 // Provides a buffer for elements of each of the variadic types Ts
 template <typename... Ts>
 class SyclBufs {
-  std::tuple<cl::sycl::buffer<Ts, 1>...> m_bufs;
+  std::tuple<sycl::buffer<Ts, 1>...> m_bufs;
 
  public:
   SyclBufs(size_t N)
-      : m_bufs(make_tuple_multi<size_t, cl::sycl::buffer<Ts, 1>...>(N)) {}
+      : m_bufs(make_tuple_multi<size_t, sycl::buffer<Ts, 1>...>(N)) {}
 
   // Returns a tuple of read accessors for the selected buffers
   template <size_t... Ids>
   AUTO_FUNC(
-      gen_read_accs(cl::sycl::handler& cgh, read_bufs_t<Ids...>),
+      gen_read_accs(sycl::handler& cgh, read_bufs_t<Ids...>),
       transform_tuple(zip_tuples(std::make_tuple(std::get<Ids>(m_bufs)...),
-                                 make_homogenous_tuple<cl::sycl::handler*,
+                                 make_homogenous_tuple<sycl::handler*,
                                                        sizeof...(Ids)>(&cgh)),
                       BufToReadAccFunc{}))
 
   // Returns a tuple of write accessors for the selected buffers
   template <size_t... Ids>
   AUTO_FUNC(
-      gen_write_accs(cl::sycl::handler& cgh, write_bufs_t<Ids...>),
+      gen_write_accs(sycl::handler& cgh, write_bufs_t<Ids...>),
       transform_tuple(zip_tuples(std::make_tuple(std::get<Ids>(m_bufs)...),
-                                 make_homogenous_tuple<cl::sycl::handler*,
+                                 make_homogenous_tuple<sycl::handler*,
                                                        sizeof...(Ids)>(&cgh)),
                       BufToDcdWriteAccFunc{}))
 

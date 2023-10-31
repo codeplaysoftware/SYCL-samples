@@ -27,18 +27,16 @@
 
 #pragma once
 
+#include "../include/integrator.hpp"
+#include "../include/double_buf.hpp"
+#include "../include/sycl_bufs.hpp"
+#include "../include/tuple_utils.hpp"
+
+#include <sycl/sycl.hpp>
+
 #include <iostream>
 #include <memory>
 #include <random>
-
-#include <CL/sycl.hpp>
-namespace sycl = cl::sycl;
-
-#include <integrator.hpp>
-
-#include <double_buf.hpp>
-#include <sycl_bufs.hpp>
-#include <tuple_utils.hpp>
 
 // Convenience types
 template <typename num_t>
@@ -134,7 +132,7 @@ class GravSim {
 
   // Base constructor, does not initialize simulation values
   GravSim(size_t n_bodies) :
-        m_q(sycl::default_selector{}, except_handler),
+        m_q(sycl::default_selector_v, except_handler),
         m_bufs(n_bodies),
         m_n_bodies(n_bodies),
         m_time(0),
@@ -253,7 +251,7 @@ class GravSim {
 
  private:
   void internal_step() {
-    m_q.submit([&](cl::sycl::handler& cgh) {
+    m_q.submit([&](sycl::handler& cgh) {
       // Initialize accessors to body data
       auto reads = m_bufs.read().gen_read_accs(cgh, read_bufs_t<0, 1>{});
       auto writes = m_bufs.write().gen_write_accs(cgh, write_bufs_t<0, 1>{});
@@ -275,7 +273,7 @@ class GravSim {
           num_t damping = m_grav_params.damping;
 
           cgh.parallel_for<kernel<num_t, 0>>(
-              cl::sycl::range<1>(m_n_bodies), [=](cl::sycl::item<1> item) {
+              sycl::range<1>(m_n_bodies), [=](sycl::item<1> item) {
                 auto id = item.get_linear_id();
 
                 // Computes the gravitational acceleration on a body using the
@@ -323,7 +321,7 @@ class GravSim {
           auto A = num_t(24) * eps * sigma;
 
           cgh.parallel_for<kernel<num_t, 1>>(
-              cl::sycl::range<1>(m_n_bodies), [=](cl::sycl::item<1> item) {
+              sycl::range<1>(m_n_bodies), [=](sycl::item<1> item) {
                 auto id = item.get_linear_id();
 
                 // Computes the acceleration on a body from the sum of
@@ -378,7 +376,7 @@ class GravSim {
               m_coulomb_charges_buf->gen_read_accs(cgh, read_bufs_t<0>{}));
 
           cgh.parallel_for<kernel<num_t, 2>>(
-              cl::sycl::range<1>(m_n_bodies), [=](cl::sycl::item<1> item) {
+              sycl::range<1>(m_n_bodies), [=](sycl::item<1> item) {
                 auto id = item.get_linear_id();
                 num_t my_charge = charges_acc[id];
 

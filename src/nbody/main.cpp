@@ -25,32 +25,86 @@
  *
  **************************************************************************/
 
-#include <chrono>
-#include <iostream>
-
-#include <cinder/CameraUi.h>
-#include <cinder/TriMesh.h>
-#include <cinder/app/App.h>
-#include <cinder/app/RendererGl.h>
-#include <cinder/gl/gl.h>
-
-#include <cinder/CinderImGui.h>
-
-#include <CL/sycl.hpp>
-
-#include <codeplay_demo.hpp>
-
 #include "sim.hpp"
 
-using num_t = float;
-constexpr num_t PI = num_t(3.141592653589793238462643383279502884197169399);
+#include <Magnum/Magnum.h>
+#include <Magnum/Math/Vector.h>
+#include <Magnum/Math/Matrix4.h>
+#include <Magnum/Math/Color.h>
+#include <Magnum/Math/Angle.h>
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/ImGuiIntegration/Context.hpp>
 
-class NBodyApp
-#ifdef CODEPLAY_DRAW_LOGO
-    : public CodeplayDemoApp
-#else
-    : public ci::app::App
-#endif
+#include <Magnum/GL/AbstractShaderProgram.h>
+#include <Magnum/GL/Shader.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Renderer.h>
+#include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureFormat.h>
+#include <Magnum/GL/Version.h>
+
+#include <Magnum/ImageView.h>
+#include <Magnum/MeshTools/Compile.h>
+#include <Magnum/Trade/MeshData.h>
+#include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Trade/ImageData.h>
+#include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Resource.h>
+
+#include <sycl/sycl.hpp>
+
+#include <chrono>
+#include <iostream>
+#include <cmath>
+
+using num_t = float;
+
+class NBodyShader : public Magnum::GL::AbstractShaderProgram {
+ public:
+  using Position = Magnum::GL::Attribute<0, Magnum::Vector3>;
+  using Velocity = Magnum::GL::Attribute<1, Magnum::Vector3>;
+  enum : unsigned int {ColourOutput = 0};
+  explicit NBodyShader() {
+    /* Load shader sources */
+    Magnum::GL::Shader vert{Magnum::GL::Version::GL330, Magnum::GL::Shader::Type::Vertex};
+    Magnum::GL::Shader frag{Magnum::GL::Version::GL330, Magnum::GL::Shader::Type::Fragment};
+    const Corrade::Utility::Resource rs{"nbody-data"};
+    vert.addSource(rs.getString("NBodyShader.vert"));
+    frag.addSource(rs.getString("NBodyShader.frag"));
+
+    /* Compile them */
+    CORRADE_INTERNAL_ASSERT_OUTPUT(vert.compile() && frag.compile());
+
+    /* Attach the shaders */
+    attachShaders({vert, frag});
+
+    bindAttributeLocation(Position::Location, "ciPosition");
+    bindAttributeLocation(Velocity::Location, "ciVelocity");
+    bindFragmentDataLocation(ColourOutput, "oColor");
+
+    /* Link the program together */
+    CORRADE_INTERNAL_ASSERT_OUTPUT(link());
+  }
+
+  NBodyShader& setView(Corrade::Containers::ArrayView<const Magnum::Math::RectangularMatrix<4, 4, Magnum::Float>> matrix) {
+      setUniform(uniformLocation("ciModelView"), matrix);
+      return *this;
+  }
+
+  NBodyShader& setViewProjection(Corrade::Containers::ArrayView<const Magnum::Math::RectangularMatrix<4, 4, Magnum::Float>> matrix) {
+      setUniform(uniformLocation("ciModelViewProjection"), matrix);
+      return *this;
+  }
+
+  NBodyShader& bindTexture(Magnum::GL::Texture2D& tex) {
+    tex.bind(0);
+    setUniform(uniformLocation("star_tex"), 0);
+    return *this;
+  }
+};
+
+class NBodyApp : public Magnum::Platform::Application
 {
   // -- GUI --
   // Distribution choice
@@ -121,70 +175,54 @@ class NBodyApp
   // -- PROGRAM VARIABLES --
   size_t m_n_bodies = m_ui_n_bodies;
 
-  // Cinder-GL variables
-  ci::CameraPersp m_cam;
-  ci::CameraUi m_cam_ui;
-  ci::gl::VboRef m_vbo;
-  ci::gl::Texture2dRef m_star_tex;
-  ci::gl::GlslProgRef m_shader;
-  ci::gl::BatchRef m_batch;
+  Magnum::Matrix4 m_view;
+  Magnum::Matrix4 m_viewProjection;
+  Corrade::Containers::Array<char> m_vboStorage;
+  Magnum::GL::Mesh m_mesh;
+  Magnum::GL::Texture2D m_star_tex;
+  NBodyShader m_shader;
+  Magnum::ImGuiIntegration::Context m_imgui{Magnum::NoCreate};
 
   // The simulation
   GravSim<num_t> m_sim;
 
  public:
-  NBodyApp() : m_sim(m_n_bodies, distrib_cylinder<num_t>{}) {}
+  NBodyApp(const Arguments& arguments)
+  : Magnum::Platform::Application{
+      arguments,
+      Configuration{}.setTitle("Codeplay NBody Demo")
+                     .addWindowFlags(Configuration::WindowFlag::Resizable),
+      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
+    m_imgui{Magnum::Vector2{windowSize()}/dpiScaling(), windowSize(), framebufferSize()},
+    m_sim(m_n_bodies, distrib_cylinder<num_t>{}) {
 
-  void setup() override {
+    const Corrade::Utility::Resource rs{"nbody-data"};
+    Corrade::PluginManager::Manager<Magnum::Trade::AbstractImporter> manager;
+    auto importer{manager.loadAndInstantiate("AnyImageImporter")};
+    if (importer==nullptr || !importer->openData(rs.getRaw("star.png"))) {
+      throw std::runtime_error{"Failed to load star.png"};
+    }
+    auto image{importer->image2D(0)};
+
+    // Enable setting point size in shader
+    glEnable(GL_PROGRAM_POINT_SIZE);
+
     // Create star texture and bind it to GL slot 0
-    m_star_tex = ci::gl::Texture2d::create(loadImage(loadAsset("star.png")));
-    m_star_tex->bind(0);
-
-    // Create shader to display the stars
-    m_shader = ci::gl::GlslProg::create(
-        ci::gl::GlslProg::Format()
-            .vertex(CI_GLSL(
-                330, uniform mat4 ciModelView;
-                uniform mat4 ciModelViewProjection; in vec3 ciPosition;
-                in vec3 ciColor; out vec3 vColor;
-
-                vec3 speedColors[9] =
-                    vec3[](vec3(0.0, 0.0, 0.2), vec3(0.0, 0.0, 0.4),
-                           vec3(0.0, 0.0, 0.8), vec3(0.0, 0.4, 0.4),
-                           vec3(0.0, 0.8, 0.8), vec3(0.0, 0.8, 0.4),
-                           vec3(0.4, 0.8, 0.0), vec3(0.8, 0.6, 0.0),
-                           vec3(0.8, 0.2, 0.0));
-
-                void main() {
-                  vec4 viewSpacePos = ciModelView * vec4(ciPosition, 1.0);
-                  // The further away a point is, the smaller its sprite
-                  float scale = log2(length(viewSpacePos));
-                  gl_PointSize = 10.0 / clamp(scale, 0.1, 1);
-                  gl_Position =
-                      ciModelViewProjection * vec4(ciPosition / 10.0, 1.0);
-                  float len = length(ciColor);
-                  int speed = int(ceil(len));
-                  vColor = mix(speedColors[max(0, speed)],
-                               speedColors[min(8, speed)], speed - len);
-                }))
-            .fragment(CI_GLSL(
-                330, uniform sampler2D star_tex; in vec3 vColor;
-                out vec4 oColor; void main() {
-                  vec2 uv = vec2(gl_PointCoord.x, gl_PointCoord.y);
-                  vec4 tex = texture2D(star_tex, uv);
-                  oColor = vec4(vColor, tex.a);
-                })));
-
-    // Make the texture uniform use slot 0, which we bound the texture to
-    m_shader->uniform("star_tex", 0);
+    m_star_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
+              .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
+              .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
+              .setStorage(1, Magnum::GL::textureFormat(image->format()), image->size())
+              .setSubImage(0, {}, *image);
 
     m_ui_force_coulomb_file.fill(0);
-    ImGui::Initialize();
 
     // Start with a perspective camera looking at the center
-    m_cam.lookAt(ci::vec3(200), ci::vec3(0));
-    m_cam.setPerspective(60.0f, getWindowAspectRatio(), 0.01f, 50000.0f);
-    m_cam_ui = ci::CameraUi(&m_cam, getWindow());
+    using namespace Magnum::Math::Literals;
+    m_view = Magnum::Matrix4::lookAt(
+      Magnum::Vector3{200}, Magnum::Vector3{0}, Magnum::Vector3{0,0,1})
+      .invertedRigid();
+    m_viewProjection = Magnum::Matrix4::perspectiveProjection(
+        60.0_degf, Magnum::Vector2{windowSize()}.aspectRatio(), 0.01f, 50000.0f);
 
     init_gl_bufs();
 
@@ -196,22 +234,13 @@ class NBodyApp
   // Initializes the GL buffer for star position data with the current number of
   // bodies
   void init_gl_bufs() {
-    auto layout = ci::geom::BufferLayout();
-    layout.append(ci::geom::Attrib::POSITION, 3, sizeof(sycl::vec<num_t, 3>),
-                  0);
-    layout.append(ci::geom::Attrib::COLOR, 3, sizeof(sycl::vec<num_t, 3>),
-                  m_n_bodies * sizeof(sycl::vec<num_t, 3>));
-
-    m_vbo = cinder::gl::Vbo::create(GL_ARRAY_BUFFER);
-    m_vbo->bufferData(m_n_bodies * sizeof(sycl::vec<num_t, 3>) * 2, nullptr,
-                      GL_DYNAMIC_DRAW);
-
-    auto mesh = cinder::gl::VboMesh::create(m_n_bodies, GL_POINTS,
-                                            {std::make_pair(layout, m_vbo)});
-    m_batch = ci::gl::Batch::create(mesh, m_shader);
+    const size_t arraySize{m_n_bodies * sizeof(sycl::vec<num_t, 3>)};
+    m_vboStorage = Corrade::Containers::Array<char>(Corrade::ValueInit, 2*arraySize);
+    m_mesh = Magnum::GL::Mesh{Magnum::GL::MeshPrimitive::Points};
+    m_mesh.setCount(m_n_bodies);
   }
 
-  void update() override {
+  void tickEvent() override {
     // Initialize simulation if requested in UI
     if (m_ui_initialize) {
       m_n_bodies = m_ui_n_bodies;
@@ -239,8 +268,8 @@ class NBodyApp
             distrib_cylinder<num_t>{
                 {m_ui_distrib_cylinder_params.min_radius,
                  m_ui_distrib_cylinder_params.max_radius},
-                {m_ui_distrib_cylinder_params.min_angle_pis * PI,
-                 m_ui_distrib_cylinder_params.max_angle_pis * PI},
+                {m_ui_distrib_cylinder_params.min_angle_pis * M_PI,
+                 m_ui_distrib_cylinder_params.max_angle_pis * M_PI},
                 {m_ui_distrib_cylinder_params.min_height,
                  m_ui_distrib_cylinder_params.max_height},
                 sycl::pow(num_t(10), m_ui_distrib_cylinder_params.lg_speed)});
@@ -326,38 +355,46 @@ class NBodyApp
     m_num_updates++;
   }
 
-  void draw() override {
-    ci::gl::clear();
+  void drawEvent() override {
+    Magnum::GL::defaultFramebuffer
+      .clear(Magnum::GL::FramebufferClear::Depth)
+      .clearColor(Magnum::Math::Color4{0.0f,0.0f,0.0f,1.0f});
 
     // Disable depth to avoid black outlines
-    ci::gl::disableDepthRead();
-    ci::gl::disableDepthWrite();
+    Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
 
     // Colors add to a bright white with additive blending
-    ci::gl::enableAdditiveBlending();
-
-    // Set transform to the camera view
-    ci::gl::setMatrices(m_cam);
+    Magnum::GL::Renderer::setBlendEquation(
+      Magnum::GL::Renderer::BlendEquation::Add,
+      Magnum::GL::Renderer::BlendEquation::Add);
+    Magnum::GL::Renderer::setBlendFunction(
+      Magnum::GL::Renderer::BlendFunction::SourceAlpha,
+      Magnum::GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::Blending);
 
     // Update star buffer data with new positions
+    const size_t arraySize{m_n_bodies * sizeof(sycl::vec<num_t, 3>)};
     m_sim.with_mapped(
         read_bufs_t<1>{}, [&](sycl::vec<num_t, 3> const* positions) {
-          m_vbo->bufferSubData(0, m_n_bodies * sizeof(sycl::vec<num_t, 3>),
-                               positions);
+          std::copy_n(reinterpret_cast<const char*>(positions), arraySize, m_vboStorage.data());
         });
     m_sim.with_mapped(
         read_bufs_t<0>{}, [&](sycl::vec<num_t, 3> const* velocities) {
-          m_vbo->bufferSubData(m_n_bodies * sizeof(sycl::vec<num_t, 3>),
-                               m_n_bodies * sizeof(sycl::vec<num_t, 3>),
-                               velocities);
+          std::copy_n(reinterpret_cast<const char*>(velocities), arraySize, m_vboStorage.data()+arraySize);
         });
 
-    // Enable setting point size in shader
-    ci::gl::enable(GL_VERTEX_PROGRAM_POINT_SIZE, true);
+    Magnum::GL::Buffer vbo{m_vboStorage};
+    m_mesh.addVertexBuffer(vbo, 0, NBodyShader::Position{})
+          .addVertexBuffer(vbo, arraySize, NBodyShader::Velocity{});
 
     // Draw bodies
-    m_batch->draw();
+    m_shader.setView({&m_view, 1})
+            .setViewProjection({&m_viewProjection, 1})
+            .bindTexture(m_star_tex)
+            .draw(m_mesh);
 
+    // TODO: Port the Cinder arrow drawing to Magnum
+    /*
     // Draw coordinate system arrows
     ci::gl::color(ci::Color(1.0f, 0.0f, 0.0f));
     ci::gl::drawVector(ci::vec3(90, 0, 0), ci::vec3(100, 0, 0), 2, 2);
@@ -365,12 +402,18 @@ class NBodyApp
     ci::gl::drawVector(ci::vec3(0, 90, 0), ci::vec3(0, 100, 0), 2, 2);
     ci::gl::color(ci::Color(0.0f, 0.0f, 1.0f));
     ci::gl::drawVector(ci::vec3(0, 0, 90), ci::vec3(0, 0, 100), 2, 2);
-
-#ifdef CODEPLAY_DRAW_LOGO
-    draw_codeplay_logo();
-#endif
+    */
 
     // Draw the UI
+    m_imgui.newFrame();
+
+    /* Enable text input, if needed */
+    if(ImGui::GetIO().WantTextInput && !isTextInputActive()) {
+      startTextInput();
+    } else if(!ImGui::GetIO().WantTextInput && isTextInputActive()) {
+      stopTextInput();
+    }
+
     ImGui::Begin("Simulation Settings");
 
     std::array<const char*, 3> forces = {
@@ -498,7 +541,47 @@ class NBodyApp
     }
 
     ImGui::End();
+
+    m_imgui.updateApplicationCursor(*this);
+
+    Magnum::GL::Renderer::setBlendEquation(
+      Magnum::GL::Renderer::BlendEquation::Add,
+      Magnum::GL::Renderer::BlendEquation::Add);
+    Magnum::GL::Renderer::setBlendFunction(
+      Magnum::GL::Renderer::BlendFunction::SourceAlpha,
+      Magnum::GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::Blending);
+    Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::ScissorTest);
+    Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
+    Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
+    m_imgui.drawFrame();
+
+    redraw();
+    swapBuffers();
   }
+
+  void viewportEvent(ViewportEvent& event) override {
+    Magnum::GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
+
+    m_imgui.relayout(Magnum::Vector2{event.windowSize()}/event.dpiScaling(),
+      event.windowSize(), event.framebufferSize());
+  }
+
+  void keyPressEvent(KeyEvent& event) override {m_imgui.handleKeyPressEvent(event);}
+  void keyReleaseEvent(KeyEvent& event) override {m_imgui.handleKeyReleaseEvent(event);}
+
+  void mousePressEvent(MouseEvent& event) override {m_imgui.handleMousePressEvent(event);}
+  void mouseReleaseEvent(MouseEvent& event) override {m_imgui.handleMouseReleaseEvent(event);}
+  void mouseMoveEvent(MouseMoveEvent& event) override {m_imgui.handleMouseMoveEvent(event);}
+  void mouseScrollEvent(MouseScrollEvent& event) override {
+    if(m_imgui.handleMouseScrollEvent(event)) {
+      /* Prevent scrolling the page */
+      event.setAccepted();
+      return;
+    }
+  }
+
+  void textInputEvent(TextInputEvent& event) override {m_imgui.handleTextInputEvent(event);}
 };
 
-CINDER_APP(NBodyApp, ci::app::RendererGl(ci::app::RendererGl::Options{}))
+MAGNUM_APPLICATION_MAIN(NBodyApp)
