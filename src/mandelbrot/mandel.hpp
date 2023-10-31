@@ -1,14 +1,11 @@
 /***************************************************************************
  *
- *  Copyright (C) 2017 Codeplay Software Limited
+ *  Copyright (C) Codeplay Software Limited
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  For your convenience, a copy of the License has been included in this
- *  repository.
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,16 +13,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  Codeplay's ComputeCpp SDK
- *
  *  Description:
  *    SYCL kernel for Mandelbrot demo.
  *
  **************************************************************************/
 
 #pragma once
-
-#include <iostream>
 
 #include <sycl/sycl.hpp>
 
@@ -142,7 +135,6 @@ class MandelbrotCalculator {
       num_t miny = m_miny;
       num_t maxy = m_maxy;
 
-      // Use the MandelbrotCalculator class for unique kernel name typ
       cgh.parallel_for<CalcKernel<num_t>>(
           sycl::range<2>(m_height, m_width), [=](sycl::item<2> item) {
             // Obtain normalized coords [0, 1]

@@ -1,27 +1,35 @@
-# Copyright (C) 2023 Codeplay Software Limited
-# This work is licensed under the Apache License, Version 2.0.
-# For a copy, see http://www.apache.org/licenses/LICENSE-2.0
+############################################################################
+#
+#  Copyright (C) Codeplay Software Limited
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+#  Description:
+#    CMake helper script configuring SYCL compilation flags
+#
+############################################################################
 
 # ------------------------------------------------
 # Detect available backends
 # ------------------------------------------------
 execute_process(
-    COMMAND bash -c "sycl-ls | grep ext_oneapi_cuda"
-    OUTPUT_QUIET
-    RESULT_VARIABLE CUDA_BACKEND_AVAILABLE) # command returns 0 if available
+    COMMAND bash -c "! sycl-ls | grep -q ext_oneapi_cuda"
+    RESULT_VARIABLE CUDA_BACKEND_AVAILABLE)
 execute_process(
-    COMMAND bash -c "sycl-ls | grep ext_oneapi_hip"
-    OUTPUT_QUIET
-    RESULT_VARIABLE HIP_BACKEND_AVAILABLE) # command returns 0 if available
+    COMMAND bash -c "! sycl-ls | grep -q ext_oneapi_hip"
+    RESULT_VARIABLE HIP_BACKEND_AVAILABLE)
 execute_process(
-    COMMAND bash -c "sycl-ls | grep 'opencl\\|level_zero'"
-    OUTPUT_QUIET
-    RESULT_VARIABLE SPIR_BACKEND_AVAILABLE) # command returns 0 if available
-
-# Change status code into boolean (swap 0 and 1)
-string(COMPARE EQUAL ${CUDA_BACKEND_AVAILABLE} 0 CUDA_BACKEND_AVAILABLE)
-string(COMPARE EQUAL ${HIP_BACKEND_AVAILABLE} 0 HIP_BACKEND_AVAILABLE)
-string(COMPARE EQUAL ${SPIR_BACKEND_AVAILABLE} 0 SPIR_BACKEND_AVAILABLE)
+    COMMAND bash -c "! sycl-ls | grep -q 'opencl\\|level_zero'"
+    RESULT_VARIABLE SPIR_BACKEND_AVAILABLE)
 
 set(ENABLE_CUDA ${CUDA_BACKEND_AVAILABLE} CACHE BOOL "Build with CUDA target")
 set(ENABLE_HIP ${HIP_BACKEND_AVAILABLE} CACHE BOOL "Build with HIP target")
@@ -57,7 +65,7 @@ if(${ENABLE_HIP})
         OUTPUT_VARIABLE HIP_GFX_ARCH
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     if ("${HIP_GFX_ARCH}" STREQUAL "")
-        message(WARNING "Failed to autoconfigure HIP gfx arch using rocminfo. Will default to sm_${DEFAULT_HIP_GFX_ARCH}")
+        message(WARNING "Failed to autoconfigure HIP gfx arch using rocminfo. Will default to ${DEFAULT_HIP_GFX_ARCH}")
         set(HIP_GFX_ARCH ${DEFAULT_HIP_GFX_ARCH} CACHE STRING "HIP gfx arch")
     else()
         message(STATUS "Enabled SYCL target HIP with gfx arch ${HIP_GFX_ARCH}")
@@ -77,8 +85,8 @@ endif()
 # ------------------------------------------------
 set(SYCL_FLAGS -fsycl -fsycl-targets=${SYCL_TARGETS})
 if(${ENABLE_CUDA})
-    set(SYCL_FLAGS ${SYCL_FLAGS} -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=sm_${CUDA_COMPUTE_CAPABILITY})
+    list(APPEND SYCL_FLAGS -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=sm_${CUDA_COMPUTE_CAPABILITY})
 endif()
 if(${ENABLE_HIP})
-    set(SYCL_FLAGS ${SYCL_FLAGS} -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${HIP_GFX_ARCH})
+    list(APPEND SYCL_FLAGS -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${HIP_GFX_ARCH})
 endif()
