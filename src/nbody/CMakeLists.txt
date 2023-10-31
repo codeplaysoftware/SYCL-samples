@@ -6,8 +6,7 @@ add_executable(NBody main.cpp
 
 target_link_libraries(NBody PRIVATE
                             Magnum::Magnum Magnum::GL Magnum::Application
-                            Magnum::Shaders Magnum::Primitives
-                            MagnumIntegration::ImGui)
+                            Magnum::Trade MagnumIntegration::ImGui)
 add_dependencies(NBody Magnum::AnyImageImporter MagnumPlugins::StbImageImporter)
 
 target_compile_options(NBody PUBLIC ${SYCL_FLAGS})

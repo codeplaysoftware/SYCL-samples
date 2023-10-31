@@ -1,24 +1,17 @@
 /***************************************************************************
  *
- *  Copyright (C) 2017 Codeplay Software Limited
+ *  Copyright (C) Codeplay Software Limited
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  For your convenience, a copy of the License has been included in this
- *  repository.
- *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  Codeplay's ComputeCpp SDK
- *
- *  main.cpp
  *
  *  Description:
  *    Application description for NBody demo.
@@ -55,10 +48,9 @@
 #include <sycl/sycl.hpp>
 
 #include <chrono>
-#include <iostream>
-#include <cmath>
 
 using num_t = float;
+constexpr num_t PI{3.141592653589793238462643383279502884197169399};
 
 class NBodyShader : public Magnum::GL::AbstractShaderProgram {
  public:
@@ -268,8 +260,8 @@ class NBodyApp : public Magnum::Platform::Application
             distrib_cylinder<num_t>{
                 {m_ui_distrib_cylinder_params.min_radius,
                  m_ui_distrib_cylinder_params.max_radius},
-                {m_ui_distrib_cylinder_params.min_angle_pis * M_PI,
-                 m_ui_distrib_cylinder_params.max_angle_pis * M_PI},
+                {m_ui_distrib_cylinder_params.min_angle_pis * PI,
+                 m_ui_distrib_cylinder_params.max_angle_pis * PI},
                 {m_ui_distrib_cylinder_params.min_height,
                  m_ui_distrib_cylinder_params.max_height},
                 sycl::pow(num_t(10), m_ui_distrib_cylinder_params.lg_speed)});
