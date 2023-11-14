@@ -29,6 +29,9 @@ Drag mouse around the screen to create fluid particles with velocities in
 direction of mouse travel. Fluid fades slowly over time so as not to fill
 the container.
 
+### Parallel Inclusive Scan
+Implementation of a parallel inclusive scan with a given associative binary operation in SYCL.
+
 ## Dependencies
 The graphical demos use
 [Magnum](https://doc.magnum.graphics/magnum/getting-started.html#getting-started-setup-install)
