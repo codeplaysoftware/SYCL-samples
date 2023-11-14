@@ -29,6 +29,13 @@ Drag mouse around the screen to create fluid particles with velocities in
 direction of mouse travel. Fluid fades slowly over time so as not to fill
 the container.
 
+### MPI for CUDA Backend 
+The source code within provides two SYCL example programs; send_recv_buff.cpp, send_recv_usm.cpp, which are CUDA MPI aware. One example uses the SYCL Unified Share Memory (USM). The other uses the Buffer (buff) model. Each example uses the programing pattern Send-Receive. 
+
+A third source code example scatter_reduce_gather demonstrates a common HPC programming idiom using Scatter, Reduce and Gather. A data array is scattered by two processes associated with different MPI ranks using Scatter. The initial data is updated within each MPI rank. Next the updated data is used to calculate a local quantity that is then reduced to a partial result in each rank using the SYCL 2020 reduction interface. Finally, the partial results from each rank are reduced to a final scalar value, ```res``````, using Reduce. Finally, the initial data is updated using Gather.
+
+These three examples are part of the [Codeplay oneAPI for NVIDIA GPUs plugin documentation](https://developer.codeplay.com/products/oneapi/nvidia/2023.2.1/guides/MPI-guide).
+
 ## Dependencies
 The graphical demos use
 [Magnum](https://doc.magnum.graphics/magnum/getting-started.html#getting-started-setup-install)
