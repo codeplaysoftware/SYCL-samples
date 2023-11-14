@@ -33,6 +33,10 @@ the container.
 *** This example is work in progress so may not work ***
 Implementation of a parallel inclusive scan with a given associative binary operation in SYCL.
 
+### Matrix Multiply OpenMP Comparison
+*** This example is work in progress so may not work ***
+A block tiled matrix multiplication example which compares an OpenMP blocked matrix multiplication implementation with a SYCL blocked matrix multiplication example. The purpose is not to compare performance, but to show the similarities and differences between them. See block_host for the OpenMP implementation.
+
 ## Dependencies
 The graphical demos use
 [Magnum](https://doc.magnum.graphics/magnum/getting-started.html#getting-started-setup-install)
