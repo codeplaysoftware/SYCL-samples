@@ -30,6 +30,7 @@ direction of mouse travel. Fluid fades slowly over time so as not to fill
 the container.
 
 ### Parallel Inclusive Scan
+*** This example is work in progress so may not work ***
 Implementation of a parallel inclusive scan with a given associative binary operation in SYCL.
 
 ## Dependencies
