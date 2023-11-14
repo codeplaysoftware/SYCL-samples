@@ -23,16 +23,16 @@ initialized from there. The simulation can be viewed from different positions
 by dragging the mouse and using the mouse wheel to control the camera.
 
 ### Fluid Simulation
-This demo visualizes fluid behaviour in a closed container. Each cell in the
+This demo visualizes fluid behavior in a closed container. Each cell in the
 cellular automata represents a fluid particle existing in a velocity field.
-Drag mouse around the screen to create fluid particles with velocities in
-direction of mouse travel. Fluid fades slowly over time so as not to fill
+Drag the mouse around the screen to create fluid particles with velocities in
+direction of the mouse travel. The fluid fades slowly over time so as not to fill
 the container.
 
 ### MPI for CUDA Backend 
 The source code within provides two SYCL example programs; send_recv_buff.cpp, send_recv_usm.cpp, which are CUDA MPI aware. One example uses the SYCL Unified Share Memory (USM). The other uses the Buffer (buff) model. Each example uses the programing pattern Send-Receive. 
 
-A third source code example scatter_reduce_gather demonstrates a common HPC programming idiom using Scatter, Reduce and Gather. A data array is scattered by two processes associated with different MPI ranks using Scatter. The initial data is updated within each MPI rank. Next the updated data is used to calculate a local quantity that is then reduced to a partial result in each rank using the SYCL 2020 reduction interface. Finally, the partial results from each rank are reduced to a final scalar value, ```res``````, using Reduce. Finally, the initial data is updated using Gather.
+A third source code example scatter_reduce_gather demonstrates a common HPC programming idiom using Scatter, Reduce and Gather. A data array is scattered by two processes associated with different MPI ranks using Scatter. The initial data is updated within each MPI rank. Next the updated data is used to calculate a local quantity that is then reduced to a partial result in each rank using the SYCL 2020 reduction interface. Finally, the partial results from each rank are reduced to a final scalar value, ```res```, using Reduce. Finally, the initial data is updated using Gather.
 
 These three examples are part of the [Codeplay oneAPI for NVIDIA GPUs plugin documentation](https://developer.codeplay.com/products/oneapi/nvidia/2023.2.1/guides/MPI-guide).
 
