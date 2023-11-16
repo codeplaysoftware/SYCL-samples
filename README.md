@@ -61,21 +61,19 @@ Both the
 and the [open source version](https://github.com/intel/llvm) are compatible.
 
 ## Building
-The project uses a standard CMake build system. To check out the repository and
-build the examples, use simply:
+The project uses a standard CMake build configuration system. Ensure the SYCL 
+compiler is used by the configuration either by setting the
+environment variable `CXX=<compiler>` or passing the configuration flag
+`-DCMAKE_CXX_COMPILER=<compiler>` where `<compiler>` is your SYCL compiler's
+executable (for example Intel `icpx` or LLVM `clang++`). \
+To check out the repository and build the examples, use simply:
 ```
 git clone --recurse-submodules <this repo's URL>
 cd SYCL-samples
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_CXX_COMPILER=<compiler>
 cmake --build .
 ```
-
-Make sure the SYCL compiler is used by the configuration either by setting the
-environment variable `CXX=<compiler>` or passing the configuration flag
-`-DCMAKE_CXX_COMPILER=<compiler>` where `<compiler>` is your SYCL compiler's
-executable (for example `icpx` or `clang++`).
-
 The CMake configuration automatically detects the available SYCL backends and
 enables the SPIR/CUDA/HIP targets for the device code, including the
 corresponding architecture flags. If desired, these auto-configured options may
