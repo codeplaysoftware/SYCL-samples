@@ -13,17 +13,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  Codeplay's ComputeCpp SDK
- *
- *  scan.cpp
- *
  *  Description:
  *    Example of a parallel inclusive scan in SYCL.
  *
  **************************************************************************/
 
 #include <CL/sycl.hpp>
-namespace sycl = cl::sycl;
 
 #include <algorithm>
 #include <iostream>

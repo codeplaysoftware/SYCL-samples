@@ -13,10 +13,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  Codeplay's ComputeCpp SDK
- *
- *  matrix-multiply.cpp
- *
  *  Description:
  *    Example of matrix multiplication in SYCL.
  *
