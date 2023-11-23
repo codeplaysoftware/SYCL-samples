@@ -45,7 +45,7 @@ reduced to a final scalar value, ```res```, using Reduce. Finally, the initial
 data is updated using Gather.
 
 These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin 
-documentation](https://developer.codeplay.com/products/oneapi/nvidia/2023.2.1/guides/MPI-guide).
+documentation](https://developer.codeplay.com/products/oneapi/nvidia/2024.0.0/guides/MPI-guide).
 
 ## Dependencies
 The graphical demos use
