@@ -46,6 +46,7 @@ data is updated using Gather.
 
 These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin 
 documentation](https://developer.codeplay.com/products/oneapi/nvidia/2024.0.0/guides/MPI-guide).
+The documentation refers to the gpu-aware MPI guide for the CUDA backend.
 
 ## Dependencies
 The graphical demos use
