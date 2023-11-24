@@ -30,8 +30,11 @@ direction of the mouse travel. The fluid fades slowly over time so as not to fil
 the container.
 
 ### MPI for CUDA Backend 
-The three minimal code examples demonstrate how GPUs which are
-CUDA-Aware MPI (Message Passing Interface est. 1992) can be used with SYCL.
+MPI, the Message Passing Interface, is a standard API for communicating data via 
+messages between distributed processes that is commonly used in HPC to build 
+applications that can scale to multi-node computer clusters.
+The three minimal code examples demonstrate how some GPUs can support
+CUDA-Aware MPI together with SYCL.
 
 The first example uses the SYCL Unified Share Memory (USM) memory model 
 (send_recv_usm.cpp). The second uses the Buffer (send_recv_buff.cpp) model. Each 
