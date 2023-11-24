@@ -31,7 +31,7 @@ the container.
 
 ### MPI for CUDA Backend 
 The three minimal code examples demonstrate how GPUs which are
-CUDA-Aware MPI can be used with SYCL.
+CUDA-Aware MPI (Message Passing Interface est. 1992) can be used with SYCL.
 
 The first example uses the SYCL Unified Share Memory (USM) memory model 
 (send_recv_usm.cpp). The second uses the Buffer (send_recv_buff.cpp) model. Each 
