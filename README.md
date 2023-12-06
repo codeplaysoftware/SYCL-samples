@@ -46,7 +46,7 @@ scattered by two processes associated with different MPI ranks using Scatter. Th
 initial data is updated within each MPI rank. Next the updated data is used to 
 calculate a local quantity that is then reduced to a partial result in each rank 
 using the SYCL 2020 reduction interface. Finally, the partial results from each 
-rank are reduced to a final scalar value, ```res```, using Reduce. Finally, the 
+rank are reduced to a final scalar value, `res`, using Reduce. Finally, the 
 initial data is updated using Gather.
 
 These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin 
