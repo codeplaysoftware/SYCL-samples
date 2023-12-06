@@ -36,7 +36,7 @@ applications that can scale to multi-node computer clusters.
 The three minimal code examples demonstrate how some GPUs can support
 CUDA-Aware MPI together with SYCL.
 
-The first example uses the SYCL Unified Share Memory (USM) memory model 
+The first example uses the SYCL Unified Shared Memory (USM) memory model 
 (send_recv_usm.cpp). The second uses the Buffer (send_recv_buff.cpp) model. Each 
 example uses the programing pattern Send-Receive. 
 
