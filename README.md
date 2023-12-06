@@ -53,6 +53,17 @@ These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin
 documentation](https://developer.codeplay.com/products/oneapi/nvidia/2024.0.0/guides/MPI-guide).
 The documentation refers to the gpu-aware MPI guide for the CUDA backend.
 
+### Parallel Inclusive Scan
+Implementation of a parallel inclusive scan with a given associative binary 
+operation in SYCL.
+
+### Matrix Multiply OpenMP Comparison
+A block tiled matrix multiplication example which compares an OpenMP blocked 
+matrix multiplication implementation with a SYCL blocked matrix multiplication 
+example. The purpose is not to compare performance, but to show the 
+similarities and differences between them. See block_host for the OpenMP 
+implementation.
+
 ## Dependencies
 The graphical demos use
 [Magnum](https://doc.magnum.graphics/magnum/getting-started.html#getting-started-setup-install)
@@ -74,21 +85,19 @@ Both the
 and the [open source version](https://github.com/intel/llvm) are compatible.
 
 ## Building
-The project uses a standard CMake build system. To check out the repository and
-build the examples, use simply:
+The project uses a standard CMake build configuration system. Ensure the SYCL 
+compiler is used by the configuration either by setting the
+environment variable `CXX=<compiler>` or passing the configuration flag
+`-DCMAKE_CXX_COMPILER=<compiler>` where `<compiler>` is your SYCL compiler's
+executable (for example Intel `icpx` or LLVM `clang++`). \
+To check out the repository and build the examples, use simply:
 ```
 git clone --recurse-submodules <this repo's URL>
 cd SYCL-samples
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_CXX_COMPILER=<compiler>
 cmake --build .
 ```
-
-Make sure the SYCL compiler is used by the configuration either by setting the
-environment variable `CXX=<compiler>` or passing the configuration flag
-`-DCMAKE_CXX_COMPILER=<compiler>` where `<compiler>` is your SYCL compiler's
-executable (for example `icpx` or `clang++`).
-
 The CMake configuration automatically detects the available SYCL backends and
 enables the SPIR/CUDA/HIP targets for the device code, including the
 corresponding architecture flags. If desired, these auto-configured options may
