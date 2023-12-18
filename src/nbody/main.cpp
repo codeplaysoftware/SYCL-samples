@@ -48,6 +48,7 @@
 #include <sycl/sycl.hpp>
 
 #include <chrono>
+#include <fstream>
 
 using num_t = float;
 constexpr num_t PI{3.141592653589793238462643383279502884197169399};

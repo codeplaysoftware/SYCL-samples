@@ -150,10 +150,8 @@ bool local_mxm(cl::sycl::queue& q, T* MA, T* MB, T* MC, int matSize) {
       auto pC = bC.template get_access<access::mode::write>(cgh);
       auto localRange = range<1>(blockSize * blockSize);
 
-      accessor<T, 1, access::mode::read_write, access::target::local> pBA(
-          localRange, cgh);
-      accessor<T, 1, access::mode::read_write, access::target::local> pBB(
-          localRange, cgh);
+      sycl::local_accessor<T, 1> pBA(localRange, cgh);
+      sycl::local_accessor<T, 1> pBB(localRange, cgh);
 
       cgh.parallel_for<mxm_kernel>(
           nd_range<2>{range<2>(matSize, matSize),
