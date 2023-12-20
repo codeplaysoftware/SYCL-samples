@@ -176,7 +176,7 @@ AUTO_FUNC(make_tuple_multi(T val), std::make_tuple(Vals(val)...))
 
 // Returns the first argument and ignores the second
 template <typename T, typename U>
-AUTO_FUNC(passthrough(T&& t, U&& u), std::forward<T>(t))
+AUTO_FUNC(passthrough(T&& t, U&& /*u*/), std::forward<T>(t))
 
 // Makes a tuple of N elements of the same type T.
 template <typename T, size_t... Ids>

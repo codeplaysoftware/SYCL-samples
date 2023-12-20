@@ -153,7 +153,7 @@ class GameOfLifeApp : public Magnum::Platform::Application
                static_cast<float>(m_height);
     // Invert Y
     y = m_height - y;
-    if (x < m_width && y < m_height) {
+    if (x < static_cast<size_t>(m_width) && y < static_cast<size_t>(m_height)) {
       // Set cell at mouse position to alive
       m_sim.add_click(x, y + 1, CellState::LIVE);
       m_sim.add_click(x + 1, y, CellState::LIVE);

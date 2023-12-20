@@ -61,7 +61,7 @@ struct kernel_name {};
  * the meaningful part of the data will stay the same. */
 template <typename T, typename Op>
 void par_scan(sycl::buffer<T, 1>& in, sycl::queue& q) {
-  if ((in.get_count() & (in.get_count() - 1)) != 0 || in.get_count() == 0) {
+  if ((in.size() & (in.size() - 1)) != 0 || in.size() == 0) {
     throw std::runtime_error("Given input size is not a power of two.");
   }
 
@@ -70,14 +70,13 @@ void par_scan(sycl::buffer<T, 1>& in, sycl::queue& q) {
 
   // Check if there is enough global memory.
   size_t global_mem_size = dev.get_info<sycl::info::device::global_mem_size>();
-  if (!dev.is_host() && in.get_count() > (global_mem_size / 2)) {
+  if (in.size() > (global_mem_size / 2)) {
     throw std::runtime_error("Input size exceeds device global memory size.");
   }
 
-  /* Check if local memory is available. On host no local memory is fine, since
-   * it is emulated. */
-  if (!dev.is_host() && dev.get_info<sycl::info::device::local_mem_type>() ==
-                            sycl::info::local_mem_type::none) {
+  /* Check if local memory is available. */
+  if (dev.get_info<sycl::info::device::local_mem_type>() ==
+      sycl::info::local_mem_type::none) {
     throw std::runtime_error("Device does not have local memory.");
   }
 
@@ -93,7 +92,7 @@ void par_scan(sycl::buffer<T, 1>& in, sycl::queue& q) {
 
   /* Every work-item processes two elements, so the work-group size has to
    * divide this number evenly. */
-  size_t half_in_size = in.get_count() / 2;
+  size_t half_in_size = in.size() / 2;
 
   size_t wgroup_size = 0;
   /* Find the largest power of two that divides half_in_size and is within the
@@ -112,10 +111,7 @@ void par_scan(sycl::buffer<T, 1>& in, sycl::queue& q) {
 
   q.submit([&](sycl::handler& cgh) {
     auto data = in.template get_access<sycl::access::mode::read_write>(cgh);
-    sycl::accessor<T, 1, sycl::access::mode::read_write,
-                   sycl::access::target::local>
-
-        temp(wgroup_size * 2, cgh);
+    sycl::local_accessor<T,1> temp(wgroup_size * 2, cgh);
 
     // Use dummy struct as the unique kernel name.
     cgh.parallel_for<kernel_name<T, Op, class scan_segments>>(
@@ -329,7 +325,7 @@ int test_factorial(sycl::queue& q) {
 }
 
 int main() {
-  sycl::queue q{sycl::default_selector{}};
+  sycl::queue q{sycl::default_selector_v};
 
   auto ret = test_sum(q);
   if (ret != 0) {

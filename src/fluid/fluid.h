@@ -297,7 +297,7 @@ class SYCLFluidContainer {
   }
 
   // Solve linear differential equation of density / velocity. (SYCL VERSION).
-  static void LinearSolve(int b, read_write_accessor x, read_write_accessor x0,
+  static void LinearSolve(int /*b*/, read_write_accessor x, read_write_accessor x0,
                           float a, float c_reciprocal, std::size_t N,
                           sycl::handler& cgh) {
     cgh.parallel_for<fluid_linear_solve>(
@@ -402,7 +402,7 @@ class SYCLFluidContainer {
   }
 
   // Move density / velocity within the field to the next step. (SYCL VERSION).
-  static void AdvectImpl(int b, read_write_accessor d, read_write_accessor d0,
+  static void AdvectImpl(int /*b*/, read_write_accessor d, read_write_accessor d0,
                          read_write_accessor u, read_write_accessor v,
                          float dt0, std::size_t N, sycl::handler& cgh) {
     cgh.parallel_for<fluid_advect>(
@@ -472,7 +472,7 @@ class SYCLFluidContainer {
   std::vector<float> density;
 
   // SYCL objects.
+  sycl::buffer<sycl::uchar4, 1> img;
   sycl::property_list props{sycl::property::buffer::use_host_ptr()};
   sycl::queue queue;
-  sycl::buffer<sycl::uchar4, 1> img;
 };
