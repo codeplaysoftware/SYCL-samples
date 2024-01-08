@@ -49,8 +49,7 @@ class SYCLFluidContainer {
         img{sycl::range<1>(size * size)},
         // Initialize queue with default selector and asynchronous exception
         // handler.
-        queue{sycl::default_selector_v,
-              [](sycl::exception_list exceptions) {
+        queue{sycl::default_selector_v, [](sycl::exception_list exceptions) {
                 for (const std::exception_ptr& e : exceptions) {
                   try {
                     std::rethrow_exception(e);
@@ -208,10 +207,8 @@ class SYCLFluidContainer {
     // Update the image pixel data with the appropriate color for a given
     // density.
     queue.submit([&](sycl::handler& cgh) {
-      auto img_acc{
-          img.template get_access(cgh, sycl::write_only)};
-      auto density_a{
-          density_b.template get_access(cgh, sycl::read_write)};
+      auto img_acc{img.template get_access(cgh, sycl::write_only)};
+      auto density_a{density_b.template get_access(cgh, sycl::read_write)};
       cgh.parallel_for<image_kernal>(
           sycl::range<1>(size * size), [=](sycl::item<1> item) {
             auto index{item.get_id(0)};
@@ -229,8 +226,8 @@ class SYCLFluidContainer {
   using float_buffer = sycl::buffer<float, 1>;
   using read_write_accessor =
       sycl::accessor<float, 1, sycl::access::mode::read_write,
-                         sycl::access::target::device,
-                         sycl::access::placeholder::false_t>;
+                     sycl::access::target::device,
+                     sycl::access::placeholder::false_t>;
 
   // Wrapper around queue submission.
   template <typename T, typename... Ts>
@@ -297,9 +294,9 @@ class SYCLFluidContainer {
   }
 
   // Solve linear differential equation of density / velocity. (SYCL VERSION).
-  static void LinearSolve(int /*b*/, read_write_accessor x, read_write_accessor x0,
-                          float a, float c_reciprocal, std::size_t N,
-                          sycl::handler& cgh) {
+  static void LinearSolve(int /*b*/, read_write_accessor x,
+                          read_write_accessor x0, float a, float c_reciprocal,
+                          std::size_t N, sycl::handler& cgh) {
     cgh.parallel_for<fluid_linear_solve>(
         sycl::range<2>(N - 2, N - 2), [=](sycl::item<2> item) {
           auto i{1 + item.get_id(0)};
@@ -402,9 +399,10 @@ class SYCLFluidContainer {
   }
 
   // Move density / velocity within the field to the next step. (SYCL VERSION).
-  static void AdvectImpl(int /*b*/, read_write_accessor d, read_write_accessor d0,
-                         read_write_accessor u, read_write_accessor v,
-                         float dt0, std::size_t N, sycl::handler& cgh) {
+  static void AdvectImpl(int /*b*/, read_write_accessor d,
+                         read_write_accessor d0, read_write_accessor u,
+                         read_write_accessor v, float dt0, std::size_t N,
+                         sycl::handler& cgh) {
     cgh.parallel_for<fluid_advect>(
         sycl::range<2>(N - 2, N - 2), [=](sycl::item<2> item) {
           auto i{1 + item.get_id(0)};

@@ -1,5 +1,6 @@
-// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_xx send_recv_buff.cpp -o res`
-// Where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
+// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda
+// -Xsycl-target-backend --cuda-gpu-arch=sm_xx send_recv_buff.cpp -o res`
+// where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
 // --cuda-gpu-arch=` flags are not explicitly provided the lowest supported CC
 // will be used: sm_50.
 
@@ -8,13 +9,13 @@
 
 #include <assert.h>
 #include <mpi.h>
+
 #include <sycl/sycl.hpp>
 
 int main(int argc, char *argv[]) {
-
-  /* -------------------------------------------------------------------------------------------
-     MPI Initialization.
-  --------------------------------------------------------------------------------------------*/
+  /* ---------------------------------------------------------------------------
+    MPI Initialization.
+  ----------------------------------------------------------------------------*/
 
   MPI_Init(&argc, &argv);
 
@@ -26,17 +27,18 @@ int main(int argc, char *argv[]) {
 
   if (size != 2) {
     if (rank == 0) {
-      printf("This program requires exactly 2 MPI ranks, but you are "
-             "attempting to use %d! Exiting...\n",
-             size);
+      printf(
+          "This program requires exactly 2 MPI ranks, "
+          "but you are attempting to use %d! Exiting...\n",
+          size);
     }
     MPI_Finalize();
     exit(0);
   }
 
-  /* -------------------------------------------------------------------------------------------
-      SYCL Initialization, which internally sets the CUDA device.
-  --------------------------------------------------------------------------------------------*/
+  /* ---------------------------------------------------------------------------
+    SYCL Initialization, which internally sets the CUDA device.
+  ----------------------------------------------------------------------------*/
 
   sycl::queue q{};
 
@@ -46,16 +48,16 @@ int main(int argc, char *argv[]) {
   std::vector<int> data(nelem, -1);
 
   {
-    /* -------------------------------------------------------------------------------------------
-      Create a SYCL buffer in each rank. The sycl::buffer created in each rank will
-      manage the copy of data to and from the device as required.
-    --------------------------------------------------------------------------------------------*/
+    /* -------------------------------------------------------------------------
+      Create a SYCL buffer in each rank. The sycl::buffer created in each rank
+      will manage the copy of data to and from the device as required.
+    --------------------------------------------------------------------------*/
 
     sycl::buffer<int> buff(&data[0], sycl::range{nelem});
 
-    /* -------------------------------------------------------------------------------------------
-     Perform the send/receive.
-    --------------------------------------------------------------------------------------------*/
+    /* -------------------------------------------------------------------------
+      Perform the send/receive.
+    --------------------------------------------------------------------------*/
 
     if (rank == 0) {
       // Operate on the Rank 0 data.
@@ -107,8 +109,7 @@ int main(int argc, char *argv[]) {
   // Check the values. Since this is outside the scope where the buffer was
   // created, the data array is automatically updated on the host.
   if (rank == 1) {
-    for (int i = 0; i < nelem; ++i)
-      assert(data[i] == -2);
+    for (int i = 0; i < nelem; ++i) assert(data[i] == -2);
   }
 
   MPI_Finalize();

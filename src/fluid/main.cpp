@@ -18,23 +18,30 @@
  *
  **************************************************************************/
 
-#include "fluid.h"
-
-#include <Magnum/Platform/Sdl2Application.h>
+#include <Corrade/Containers/StringStlView.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
-#include <Magnum/PixelFormat.h>
 #include <Magnum/ImageView.h>
-#include <Magnum/Shaders/FlatGL.h>
-#include <Magnum/Primitives/Square.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/Primitives/Square.h>
+#include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Trade/MeshData.h>
 
 #include <sycl/sycl.hpp>
 
+#include "fluid.h"
+
 constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
+
+// Title bar text
+constexpr std::string_view WINDOWTITLE{
+    "Codeplay Fluid Simulation"
+    " - Move mouse to add fluid"
+    " - Press space to clear fluid"};
 
 // Size of the fluid container edge (always square shaped).
 constexpr int SIZE{300};
@@ -45,27 +52,26 @@ constexpr int SCALE{3};
 class FluidSimulationApp : public Magnum::Platform::Application {
  public:
   FluidSimulationApp(const Arguments& arguments)
-  : Magnum::Platform::Application{
-      arguments,
-      Configuration{}.setTitle("Codeplay Fluid Simulation"
-        " - Move mouse to add fluid - Press space to clear fluid"),
-      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
-    size_{SIZE},
-    fluid_{SIZE, 0.2f, 0.0f, 0.0000001f},
-    mesh_{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
-      Magnum::Primitives::SquareFlag::TextureCoordinates))},
-    shader_{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
-      Magnum::Shaders::FlatGL2D::Flag::Textured |
-      Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
-
+      : Magnum::Platform::Application{arguments,
+                                      Configuration{}.setTitle(WINDOWTITLE),
+                                      GLConfiguration{}.setFlags(
+                                          GLConfiguration::Flag::QuietLog)},
+        size_{SIZE},
+        fluid_{SIZE, 0.2f, 0.0f, 0.0000001f},
+        mesh_{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
+            Magnum::Primitives::SquareFlag::TextureCoordinates))},
+        shader_{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
+            Magnum::Shaders::FlatGL2D::Flag::Textured |
+            Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
     // Set window size.
-    setWindowSize({SIZE*SCALE, SIZE*SCALE});
-    Magnum::GL::defaultFramebuffer.setViewport({{0,0},{SIZE*SCALE, SIZE*SCALE}});
+    setWindowSize({SIZE * SCALE, SIZE * SCALE});
+    Magnum::GL::defaultFramebuffer.setViewport(
+        {{0, 0}, {SIZE * SCALE, SIZE * SCALE}});
 
     texture_.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
-            .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
-            .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
-            .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {size_, size_});
+        .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
+        .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
+        .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {size_, size_});
     shader_.bindTexture(texture_);
   }
 
@@ -89,18 +95,18 @@ class FluidSimulationApp : public Magnum::Platform::Application {
   // Draws fluid to the screen.
   void drawEvent() override final {
     // Clear screen.
-    Magnum::GL::defaultFramebuffer.clear(
-        Magnum::GL::FramebufferClear::Color |
-        Magnum::GL::FramebufferClear::Depth);
+    Magnum::GL::defaultFramebuffer.clear(Magnum::GL::FramebufferClear::Color |
+                                         Magnum::GL::FramebufferClear::Depth);
 
     // Update texture with pixel data array.
     fluid_.WithData([&](sycl::uchar4 const* data) {
-          Magnum::ImageView2D img{
-            PIXELFORMAT, {size_, size_},
-            Corrade::Containers::ArrayView{
+      Magnum::ImageView2D img{
+          PIXELFORMAT,
+          {size_, size_},
+          Corrade::Containers::ArrayView{
               reinterpret_cast<const char*>(data),
-              size_*size_*Magnum::pixelFormatSize(PIXELFORMAT)}};
-          texture_.setSubImage(0, {0,0}, img);
+              size_ * size_ * Magnum::pixelFormatSize(PIXELFORMAT)}};
+      texture_.setSubImage(0, {0, 0}, img);
     });
 
     // Draw texture to screen.

@@ -1,5 +1,6 @@
-// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_xx send_recv_usm.cpp -o res`
-// Where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
+// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda
+// -Xsycl-target-backend --cuda-gpu-arch=sm_xx send_recv_usm.cpp -o res` Where
+// sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
 // --cuda-gpu-arch=` flags are not explicitly provided the lowest supported CC
 // will be used: sm_50.
 
@@ -8,10 +9,10 @@
 
 #include <assert.h>
 #include <mpi.h>
+
 #include <sycl/sycl.hpp>
 
 int main(int argc, char *argv[]) {
-
   /* -------------------------------------------------------------------------------------------
      MPI Initialization.
   --------------------------------------------------------------------------------------------*/
@@ -26,9 +27,10 @@ int main(int argc, char *argv[]) {
 
   if (size != 2) {
     if (rank == 0) {
-      printf("This program requires exactly 2 MPI ranks, but you are "
-             "attempting to use %d! Exiting...\n",
-             size);
+      printf(
+          "This program requires exactly 2 MPI ranks, "
+          "but you are attempting to use %d! Exiting...\n",
+          size);
     }
     MPI_Finalize();
     exit(0);
@@ -86,8 +88,7 @@ int main(int argc, char *argv[]) {
     sycl::free(devp, q);
 
     // Check the values.
-    for (int i = 0; i < nelem; ++i)
-      assert(data[i] == -2);
+    for (int i = 0; i < nelem; ++i) assert(data[i] == -2);
   }
   MPI_Finalize();
   return 0;

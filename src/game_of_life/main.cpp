@@ -18,28 +18,28 @@
  *
  **************************************************************************/
 
-#include "sim.hpp"
-
-#include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
-#include <Magnum/PixelFormat.h>
 #include <Magnum/ImageView.h>
-#include <Magnum/Shaders/FlatGL.h>
-#include <Magnum/Primitives/Square.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/Primitives/Square.h>
+#include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Trade/MeshData.h>
 
-#include <sycl/sycl.hpp>
-#include <thread>
 #include <chrono>
+#include <thread>
+
+#include <sycl/sycl.hpp>
+
+#include "sim.hpp"
 
 constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
 
-class GameOfLifeApp : public Magnum::Platform::Application
-{
+class GameOfLifeApp : public Magnum::Platform::Application {
   /// The window dimensions
   int m_width;
   int m_height;
@@ -71,27 +71,30 @@ class GameOfLifeApp : public Magnum::Platform::Application
 
  public:
   GameOfLifeApp(const Arguments& arguments)
-  : Magnum::Platform::Application{
-      arguments,
-      Configuration{}.setTitle("Codeplay Game of Life Demo")
-                     .addWindowFlags(Configuration::WindowFlag::Resizable),
-      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
-    m_width(windowSize().x()),
-    m_height(windowSize().y()),
-    m_zoom(1),
-    m_resized_width{m_width},
-    m_resized_height{m_height},
-    m_sim(m_width, m_height),
-    m_mesh{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
-      Magnum::Primitives::SquareFlag::TextureCoordinates))},
-    m_shader{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
-      Magnum::Shaders::FlatGL2D::Flag::Textured |
-      Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
-
+      : Magnum::Platform::
+            Application{arguments,
+                        Configuration{}
+                            .setTitle("Codeplay Game of Life Demo")
+                            .addWindowFlags(
+                                Configuration::WindowFlag::Resizable),
+                        GLConfiguration{}.setFlags(
+                            GLConfiguration::Flag::QuietLog)},
+        m_width(windowSize().x()),
+        m_height(windowSize().y()),
+        m_zoom(1),
+        m_resized_width{m_width},
+        m_resized_height{m_height},
+        m_sim(m_width, m_height),
+        m_mesh{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
+            Magnum::Primitives::SquareFlag::TextureCoordinates))},
+        m_shader{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
+            Magnum::Shaders::FlatGL2D::Flag::Textured |
+            Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
     m_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
-         .setMagnificationFilter(Magnum::GL::SamplerFilter::Nearest)
-         .setMinificationFilter(Magnum::GL::SamplerFilter::Nearest)
-         .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {m_width,m_height});
+        .setMagnificationFilter(Magnum::GL::SamplerFilter::Nearest)
+        .setMinificationFilter(Magnum::GL::SamplerFilter::Nearest)
+        .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT),
+                    {m_width, m_height});
     m_shader.bindTexture(m_tex);
   }
 
@@ -105,9 +108,10 @@ class GameOfLifeApp : public Magnum::Platform::Application
         // Reinitializes image to new size
         m_tex = Magnum::GL::Texture2D{};
         m_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
-             .setMagnificationFilter(Magnum::GL::SamplerFilter::Nearest)
-             .setMinificationFilter(Magnum::GL::SamplerFilter::Nearest)
-             .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {m_width,m_height});
+            .setMagnificationFilter(Magnum::GL::SamplerFilter::Nearest)
+            .setMinificationFilter(Magnum::GL::SamplerFilter::Nearest)
+            .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT),
+                        {m_width, m_height});
         m_shader.bindTexture(m_tex);
 
         m_resized = false;
@@ -123,19 +127,19 @@ class GameOfLifeApp : public Magnum::Platform::Application
   }
 
   void drawEvent() override {
-    Magnum::GL::defaultFramebuffer.clear(
-        Magnum::GL::FramebufferClear::Color |
-        Magnum::GL::FramebufferClear::Depth);
+    Magnum::GL::defaultFramebuffer.clear(Magnum::GL::FramebufferClear::Color |
+                                         Magnum::GL::FramebufferClear::Depth);
 
     m_sim.with_img(
         // Gets called with image data
         [&](sycl::uchar4 const* data) {
           Magnum::ImageView2D img{
-            PIXELFORMAT, {m_width, m_height},
-            Corrade::Containers::ArrayView{
-              reinterpret_cast<const char*>(data),
-              m_width*m_height*Magnum::pixelFormatSize(PIXELFORMAT)}};
-          m_tex.setSubImage(0, {0,0}, img);
+              PIXELFORMAT,
+              {m_width, m_height},
+              Corrade::Containers::ArrayView{
+                  reinterpret_cast<const char*>(data),
+                  m_width * m_height * Magnum::pixelFormatSize(PIXELFORMAT)}};
+          m_tex.setSubImage(0, {0, 0}, img);
         });
 
     m_shader.draw(m_mesh);
@@ -158,8 +162,8 @@ class GameOfLifeApp : public Magnum::Platform::Application
       m_sim.add_click(x, y + 1, CellState::LIVE);
       m_sim.add_click(x + 1, y, CellState::LIVE);
       m_sim.add_click(x, y - 1, CellState::LIVE);
-      m_sim.add_click(x - 1, y - 1, CellState::LIVE);      
-    }    
+      m_sim.add_click(x - 1, y - 1, CellState::LIVE);
+    }
   }
 
   void mousePressEvent(MouseEvent& event) override {
@@ -187,7 +191,9 @@ class GameOfLifeApp : public Magnum::Platform::Application
     m_zoom = sycl::clamp(m_zoom, 1.0f, 64.0f);
 
     // Restart after zooming
-    if (m_zoom!=prevZoom) {m_resized = true;}
+    if (m_zoom != prevZoom) {
+      m_resized = true;
+    }
   }
 
   void keyPressEvent(KeyEvent& event) override {
@@ -201,7 +207,8 @@ class GameOfLifeApp : public Magnum::Platform::Application
     m_resized_width = event.windowSize().x();
     m_resized_height = event.windowSize().y();
     m_resized = true;
-    Magnum::GL::defaultFramebuffer.setViewport({{0,0}, event.framebufferSize()});
+    Magnum::GL::defaultFramebuffer.setViewport(
+        {{0, 0}, event.framebufferSize()});
   }
 };
 

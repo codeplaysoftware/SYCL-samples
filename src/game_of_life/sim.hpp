@@ -20,11 +20,11 @@
 
 #pragma once
 
-#include "../include/double_buf.hpp"
+#include <random>
 
 #include <sycl/sycl.hpp>
 
-#include <random>
+#include "../include/double_buf.hpp"
 
 enum class CellState : unsigned int {
   LIVE = 1,
@@ -75,18 +75,15 @@ class GameOfLifeSim {
             }
           }
         }) {
-
     // Initialize game grid in a way that 1/4 of the cells will be live and rest
     // dead
 
-    auto acells =
-        m_game.read().cells.get_host_access(sycl::write_only);
-    auto aimg =
-        m_game.read().img.get_host_access(sycl::write_only);
+    auto acells = m_game.read().cells.get_host_access(sycl::write_only);
+    auto aimg = m_game.read().img.get_host_access(sycl::write_only);
 
     std::random_device rd;
-    std::default_random_engine re{ rd() };
-    std::bernoulli_distribution dist{ 0.75 };
+    std::default_random_engine re{rd()};
+    std::bernoulli_distribution dist{0.75};
 
     for (size_t y = 0; y < m_height; y++) {
       for (size_t x = 0; x < m_width; x++) {
@@ -219,9 +216,9 @@ class GameOfLifeSim {
             new_vel = sycl::fabs(new_vel) * 5.0f + sycl::float2(0.2f, 0.2f);
 
             // Set image pixel to new colour decided by state and "velocity"
-            img[sycl::id<2>(y, x)] = sycl::uchar4(
-                float(int(new_state)) * new_vel.x() * 255.0f, 0,
-                float(int(new_state)) * new_vel.y() * 255.0f, 255);
+            img[sycl::id<2>(y, x)] =
+                sycl::uchar4(float(int(new_state)) * new_vel.x() * 255.0f, 0,
+                             float(int(new_state)) * new_vel.y() * 255.0f, 255);
           });
     });
 

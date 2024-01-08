@@ -19,7 +19,6 @@
  **************************************************************************/
 
 #include <CL/sycl.hpp>
-
 #include <algorithm>
 #include <iostream>
 #include <numeric>
@@ -111,7 +110,7 @@ void par_scan(sycl::buffer<T, 1>& in, sycl::queue& q) {
 
   q.submit([&](sycl::handler& cgh) {
     auto data = in.template get_access<sycl::access::mode::read_write>(cgh);
-    sycl::local_accessor<T,1> temp(wgroup_size * 2, cgh);
+    sycl::local_accessor<T, 1> temp(wgroup_size * 2, cgh);
 
     // Use dummy struct as the unique kernel name.
     cgh.parallel_for<kernel_name<T, Op, class scan_segments>>(
