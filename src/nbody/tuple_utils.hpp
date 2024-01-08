@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include <tuple>
 #include <cstddef>
+#include <tuple>
 
 /* Given a function name and a one-line body, defines an auto-return-type
  * function with these parameters. */

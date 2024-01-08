@@ -1,4 +1,5 @@
-// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_xx scatter_reduce_gather.cpp -o res`
+// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda
+// -Xsycl-target-backend --cuda-gpu-arch=sm_xx scatter_reduce_gather.cpp -o res`
 // Where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
 // --cuda-gpu-arch=` flags are not explicitly provided the lowest supported CC
 // will be used: sm_50.
@@ -14,10 +15,10 @@
 
 #include <assert.h>
 #include <mpi.h>
+
 #include <sycl/sycl.hpp>
 
 int main(int argc, char *argv[]) {
-
   /* -------------------------------------------------------------------------------------------
      MPI Initialization.
   --------------------------------------------------------------------------------------------*/
@@ -32,9 +33,10 @@ int main(int argc, char *argv[]) {
 
   if (size != 2) {
     if (rank == 0) {
-      printf("This program requires exactly 2 MPI ranks, but you are "
-             "attempting to use %d! Exiting...\n",
-             size);
+      printf(
+          "This program requires exactly 2 MPI ranks, "
+          "but you are attempting to use %d! Exiting...\n",
+          size);
     }
     MPI_Finalize();
     exit(0);
