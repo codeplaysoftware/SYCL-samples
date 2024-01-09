@@ -20,16 +20,16 @@
 
 #pragma once
 
-#include "integrator.hpp"
-#include "sycl_bufs.hpp"
-#include "tuple_utils.hpp"
-#include "../include/double_buf.hpp"
-
-#include <sycl/sycl.hpp>
-
 #include <iostream>
 #include <memory>
 #include <random>
+
+#include <sycl/sycl.hpp>
+
+#include "../include/double_buf.hpp"
+#include "integrator.hpp"
+#include "sycl_bufs.hpp"
+#include "tuple_utils.hpp"
 
 // Convenience types
 template <typename num_t>
@@ -124,8 +124,8 @@ class GravSim {
   integrator_t m_integrator;
 
   // Base constructor, does not initialize simulation values
-  GravSim(size_t n_bodies) :
-        m_q(sycl::default_selector_v, except_handler),
+  GravSim(size_t n_bodies)
+      : m_q(sycl::default_selector_v, except_handler),
         m_bufs(n_bodies),
         m_n_bodies(n_bodies),
         m_time(0),
@@ -300,7 +300,6 @@ class GravSim {
                 } else if (integrator == integrator_t::RK4) {
                   std::tie(wvelTmp, wposTmp, std::ignore) =
                       integrate_step_rk4(grav, STEP_SIZE, vel[id], pos[id], t);
-
                 }
 
                 wvel[id] = wvelTmp;
@@ -354,8 +353,8 @@ class GravSim {
                       integrate_step_rk4(force, STEP_SIZE, vel[id], pos[id], t);
                 }
 
-                 wvel[id] = wvelTmp;
-                 wpos[id] = wposTmp;
+                wvel[id] = wvelTmp;
+                wpos[id] = wposTmp;
               });
         } break;
         case force_t::COULOMB: {

@@ -18,30 +18,29 @@
  *
  **************************************************************************/
 
-
-#include "mandel.hpp"
-
-#include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
-#include <Magnum/PixelFormat.h>
 #include <Magnum/ImageView.h>
-#include <Magnum/Shaders/FlatGL.h>
-#include <Magnum/Primitives/Square.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/Primitives/Square.h>
+#include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Trade/MeshData.h>
 
 #include <sycl/sycl.hpp>
 
+#include "mandel.hpp"
+
 constexpr size_t WIDTH = 800;
 constexpr size_t HEIGHT = 600;
 constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
-const size_t PIXELDATASIZE{WIDTH*HEIGHT*Magnum::pixelFormatSize(PIXELFORMAT)};
+const size_t PIXELDATASIZE{WIDTH * HEIGHT *
+                           Magnum::pixelFormatSize(PIXELFORMAT)};
 
-class MandelbrotApp : public Magnum::Platform::Application
-{
+class MandelbrotApp : public Magnum::Platform::Application {
   // Use doubles for more zoom
   MandelbrotCalculator m_calc;
 
@@ -65,21 +64,21 @@ class MandelbrotApp : public Magnum::Platform::Application
 
  public:
   MandelbrotApp(const Arguments& arguments)
-  : Magnum::Platform::Application{
-      arguments,
-      Configuration{}.setTitle("Codeplay Mandelbrot Demo"),
-      GLConfiguration{}.setFlags(GLConfiguration::Flag::QuietLog)},
-    m_calc{WIDTH, HEIGHT},
-    m_mesh{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
-      Magnum::Primitives::SquareFlag::TextureCoordinates))},
-    m_shader{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
-      Magnum::Shaders::FlatGL2D::Flag::Textured |
-      Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
-
+      : Magnum::Platform::Application{arguments,
+                                      Configuration{}.setTitle(
+                                          "Codeplay Mandelbrot Demo"),
+                                      GLConfiguration{}.setFlags(
+                                          GLConfiguration::Flag::QuietLog)},
+        m_calc{WIDTH, HEIGHT},
+        m_mesh{Magnum::MeshTools::compile(Magnum::Primitives::squareSolid(
+            Magnum::Primitives::SquareFlag::TextureCoordinates))},
+        m_shader{Magnum::Shaders::FlatGL2D::Configuration{}.setFlags(
+            Magnum::Shaders::FlatGL2D::Flag::Textured |
+            Magnum::Shaders::FlatGL2D::Flag::TextureTransformation)} {
     m_tex.setWrapping(Magnum::GL::SamplerWrapping::ClampToEdge)
-          .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
-          .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
-          .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {WIDTH,HEIGHT});
+        .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear)
+        .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
+        .setStorage(1, Magnum::GL::textureFormat(PIXELFORMAT), {WIDTH, HEIGHT});
     m_shader.bindTexture(m_tex);
   }
 
@@ -104,16 +103,17 @@ class MandelbrotApp : public Magnum::Platform::Application
   }
 
   void drawEvent() override {
-    Magnum::GL::defaultFramebuffer.clear(
-        Magnum::GL::FramebufferClear::Color |
-        Magnum::GL::FramebufferClear::Depth);
+    Magnum::GL::defaultFramebuffer.clear(Magnum::GL::FramebufferClear::Color |
+                                         Magnum::GL::FramebufferClear::Depth);
 
     // Update GL texture with new calculation data
     m_calc.with_data([&](sycl::uchar4 const* data) {
       Magnum::ImageView2D img{
-        PIXELFORMAT, {WIDTH,HEIGHT},
-        Corrade::Containers::ArrayView{reinterpret_cast<const char*>(data), PIXELDATASIZE}};
-      m_tex.setSubImage(0, {0,0}, img);
+          PIXELFORMAT,
+          {WIDTH, HEIGHT},
+          Corrade::Containers::ArrayView{reinterpret_cast<const char*>(data),
+                                         PIXELDATASIZE}};
+      m_tex.setSubImage(0, {0, 0}, img);
     });
 
     m_shader.draw(m_mesh);
