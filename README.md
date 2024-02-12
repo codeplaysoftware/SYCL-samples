@@ -29,6 +29,7 @@ Drag the mouse around the screen to create fluid particles with velocities in
 direction of the mouse travel. The fluid fades slowly over time so as not to fill
 the container.
 
+## Non-graphical Demos
 ### MPI for CUDA Backend 
 MPI, the Message Passing Interface, is a standard API for communicating data via 
 messages between distributed processes that is commonly used in HPC to build 
@@ -76,7 +77,9 @@ include them in the checkout via
 `git clone --recurse-submodules <this repo's URL>`. SDL2 needs to be supplied by
 the user and can be installed with common package managers on most systems, or
 built from source. If you install SDL2 from source in a non-default location,
-pass it into the CMake configuration with `-DSDL2_ROOT=<path>`.
+pass it into the CMake configuration with `-DSDL2_ROOT=<path>`. It is possible
+to build the project without the graphical demos using `-DENABLE_GRAPHICS=OFF`
+if SDL2 cannot be provided - see the Building section below.
 
 Although the code should compile with any SYCL implementation, the CMake
 configuration assumes the DPC++ compiler driver CLI for compilation flags setup.
@@ -89,7 +92,8 @@ The project uses a standard CMake build configuration system. Ensure the SYCL
 compiler is used by the configuration either by setting the
 environment variable `CXX=<compiler>` or passing the configuration flag
 `-DCMAKE_CXX_COMPILER=<compiler>` where `<compiler>` is your SYCL compiler's
-executable (for example Intel `icpx` or LLVM `clang++`). \
+executable (for example Intel `icpx` or LLVM `clang++`).
+
 To check out the repository and build the examples, use simply:
 ```
 git clone --recurse-submodules <this repo's URL>
@@ -110,3 +114,10 @@ be overridden with `-D<OPTION>=<VALUE>` with the following options:
 | `ENABLE_HIP` | `ON` or `OFF` |
 | `CUDA_COMPUTE_CAPABILITY` | Integer, e.g. `70` meaning capability 7.0 (arch `sm_70`) |
 | `HIP_GFX_ARCH` | String, e.g. `gfx1030` |
+
+### Building without graphics
+It is possible to build only the non-graphical demos by adding the option
+`-DENABLE_GRAPHICS=OFF` to the CMake configuration command. In this case
+building of the Magnum library will be skipped and the SDL2 library is not
+required as dependency. The option `--recurse-submodules` can also be skipped
+during the checkout when building only the non-graphical demos.
