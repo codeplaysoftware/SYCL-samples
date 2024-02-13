@@ -5,6 +5,12 @@
 cmake_minimum_required(VERSION 3.5)
 project(SYCL-samples)
 
+# Set build type to Release if unset
+if(CMAKE_BUILD_TYPE STREQUAL "")
+    message(STATUS "CMAKE_BUILD_TYPE was not set, setting to Release")
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 # Set global flags
 set(CMAKE_CXX_STANDARD 17)
 
@@ -34,4 +40,5 @@ add_subdirectory(src/game_of_life)
 add_subdirectory(src/mandelbrot)
 add_subdirectory(src/nbody)
 add_subdirectory(src/matrix_multiply_omp_compare)
+add_subdirectory(src/MPI_for_CUDA_backend)
 add_subdirectory(src/scan_parallel_inclusive)

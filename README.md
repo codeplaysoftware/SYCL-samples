@@ -37,10 +37,10 @@ The three minimal code examples demonstrate how some GPUs can support
 CUDA-Aware MPI together with SYCL.
 
 The first example uses the SYCL Unified Shared Memory (USM) memory model 
-(send_recv_usm.cpp). The second uses the Buffer (send_recv_buff.cpp) model. Each 
-example uses the programing pattern Send-Receive. 
+(`send_recv_usm`). The second uses the Buffer (`send_recv_buff`) model. Each
+example uses the programming pattern Send-Receive.
 
-The third slightly more complex code example scatter_reduce_gather demonstrates 
+The third slightly more complex code example `scatter_reduce_gather` demonstrates
 a common HPC programming idiom using Scatter, Reduce and Gather. A data array is 
 scattered by two processes associated with different MPI ranks using Scatter. The 
 initial data is updated within each MPI rank. Next the updated data is used to 
@@ -50,8 +50,15 @@ rank are reduced to a final scalar value, `res`, using Reduce. Finally, the
 initial data is updated using Gather.
 
 These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin 
-documentation](https://developer.codeplay.com/products/oneapi/nvidia/2024.0.0/guides/MPI-guide).
+documentation](https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide).
 The documentation refers to the gpu-aware MPI guide for the CUDA backend.
+
+Building the MPI examples requires the MPI headers and library to be present on
+the system. This demo will be automatically skipped if MPI is not installed or
+detected and a message saying this will appear in the CMake configuration
+output. Additionally, in order to run the examples, the MPI implementation needs
+to be CUDA-aware. This is only detectable at runtime, so the examples may build
+fine but crash on execution if the linked MPI library isn't CUDA-aware.
 
 ### Parallel Inclusive Scan
 Implementation of a parallel inclusive scan with a given associative binary 
