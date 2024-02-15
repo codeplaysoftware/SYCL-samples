@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
 
     q.submit(pf).wait();
 
-    MPI_Status status;
     // Send the data from rank 0 to rank 1.
     MPI_Send(devp, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
     printf("Sent %d elements from %d to 1\n", nelem, rank);

@@ -54,9 +54,10 @@ These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin
 documentation](https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide).
 The documentation refers to the gpu-aware MPI guide for the CUDA backend.
 
-Building the MPI examples requires the MPI headers and library to be present on
-the system. This demo will be automatically skipped if MPI is not installed or
-detected and a message saying this will appear in the CMake configuration
+Building the MPI-CUDA examples requires the CUDA backend to be enabled and the
+MPI headers and library to be present on the system. This demo will be
+automatically skipped when not building for the CUDA backend or when MPI is not
+installed/detected. A message saying this will appear in the CMake configuration
 output. Additionally, in order to run the examples, the MPI implementation needs
 to be CUDA-aware. This is only detectable at runtime, so the examples may build
 fine but crash on execution if the linked MPI library isn't CUDA-aware.
