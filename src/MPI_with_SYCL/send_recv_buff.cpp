@@ -1,11 +1,13 @@
-// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda
-// -Xsycl-target-backend --cuda-gpu-arch=sm_xx send_recv_buff.cpp -o res`
-// where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
-// --cuda-gpu-arch=` flags are not explicitly provided the lowest supported CC
-// will be used: sm_50.
+// Refer to
+// https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide
+// or https://developer.codeplay.com/products/oneapi/amd/latest/guides/MPI-guide
+// for build/run instructions
 
-// This example shows how to use CUDA-aware MPI with SYCL Buffer memory using a
+// This example shows how to use GPU-aware MPI with SYCL Buffer memory using a
 // simple send-receive pattern.
+// By default this sample assumes that the backend used is cuda. To use hip
+// simply define the MACRO USE_HIP. Or to use level_zero define the MACRO
+// USE_L0.
 
 #include <assert.h>
 #include <mpi.h>
@@ -37,7 +39,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* ---------------------------------------------------------------------------
-    SYCL Initialization, which internally sets the CUDA device.
+    SYCL Initialization, which internally sets the GPU device.
   ----------------------------------------------------------------------------*/
 
   sycl::queue q{};
@@ -66,19 +68,27 @@ int main(int argc, char *argv[]) {
         auto kern = [=](sycl::id<1> id) { acc[id] *= 2; };
         h.parallel_for(sycl::range<1>{nelem}, kern);
       };
-      // When using buffers with CUDA-aware MPI, a host_task must be used with a
+      // When using buffers with GPU-aware MPI, a host_task must be used with a
       // sycl::interop_handle in the following way. This host task command group
       // uses MPI_Send to send the data to rank 1.
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          // get the native CUDA device pointer from the SYCL accessor.
-          auto cuda_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
+// get the native GPU device pointer from the SYCL accessor.
+#if defined(USE_HIP)
+          auto gpu_ptr = reinterpret_cast<int *>(
+              ih.get_native_mem<sycl::backend::hip>(acc));
+#elif defined(USE_L0)
+          auto gpu_ptr = reinterpret_cast<int *>(
+              ih.get_native_mem<sycl::backend::level_zero>(acc));
+#else
+          auto gpu_ptr = reinterpret_cast<int *>(
+              ih.get_native_mem<sycl::backend::cuda>(acc));
+#endif
 
           MPI_Status status;
           // Send the data from rank 0 to rank 1.
-          MPI_Send(cuda_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
+          MPI_Send(gpu_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
           printf("Sent %d elements from %d to 1\n", nelem, rank);
         });
       };
@@ -92,13 +102,17 @@ int main(int argc, char *argv[]) {
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          // get the native CUDA device pointer from the SYCL accessor.
-          auto cuda_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
+          // get the native GPU device pointer from the SYCL accessor.
+          auto gpu_ptr = reinterpret_cast<int *>(
+#if defined(USE_HIP)
+              ih.get_native_mem<sycl::backend::hip>(acc));
+#else
+              ih.get_native_mem<sycl::backend::cuda>(acc));
+#endif
 
           MPI_Status status;
           // Receive the data sent from rank 0.
-          MPI_Recv(cuda_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD, &status);
+          MPI_Recv(gpu_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD, &status);
           printf("received status==%d\n", status.MPI_ERROR);
         });
       };
