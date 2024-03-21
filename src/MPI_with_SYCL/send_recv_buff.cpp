@@ -103,10 +103,14 @@ int main(int argc, char *argv[]) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
           // get the native GPU device pointer from the SYCL accessor.
-          auto gpu_ptr = reinterpret_cast<int *>(
 #if defined(USE_HIP)
+          auto gpu_ptr = reinterpret_cast<int *>(
               ih.get_native_mem<sycl::backend::hip>(acc));
+#elif defined(USE_L0)
+          auto gpu_ptr = reinterpret_cast<int *>(
+              ih.get_native_mem<sycl::backend::level_zero>(acc));
 #else
+          auto gpu_ptr = reinterpret_cast<int *>(
               ih.get_native_mem<sycl::backend::cuda>(acc));
 #endif
 
