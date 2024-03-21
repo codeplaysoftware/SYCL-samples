@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          // get the native GPU device pointer from the SYCL accessor.
+        // get the native GPU device pointer from the SYCL accessor.
 #if defined(USE_HIP)
           auto gpu_ptr = reinterpret_cast<int *>(
               ih.get_native_mem<sycl::backend::hip>(acc));
