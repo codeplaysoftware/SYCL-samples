@@ -23,7 +23,7 @@ include(cmake/ConfigureSYCL.cmake)
 # Configure the demo projects
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "" FORCE)
 add_subdirectory(src/matrix_multiply_omp_compare)
-add_subdirectory(src/MPI_for_CUDA_backend)
+add_subdirectory(src/MPI_with_SYCL)
 add_subdirectory(src/scan_parallel_inclusive)
 if(ENABLE_GRAPHICS)
      add_subdirectory(src/fluid)
