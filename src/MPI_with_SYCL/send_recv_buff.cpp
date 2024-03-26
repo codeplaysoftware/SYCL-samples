@@ -77,13 +77,13 @@ int main(int argc, char *argv[]) {
 // get the native GPU device pointer from the SYCL accessor.
 #if defined(USE_HIP)
           auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::hip>(acc));
+              ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
 #elif defined(USE_L0)
           auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::level_zero>(acc));
+              ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
 #else
           auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::cuda>(acc));
+              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
 #endif
 
           MPI_Status status;
@@ -105,13 +105,13 @@ int main(int argc, char *argv[]) {
         // get the native GPU device pointer from the SYCL accessor.
 #if defined(USE_HIP)
           auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::hip>(acc));
+              ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
 #elif defined(USE_L0)
           auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::level_zero>(acc));
+              ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
 #else
           auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::cuda>(acc));
+              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
 #endif
 
           MPI_Status status;
