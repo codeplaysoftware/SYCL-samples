@@ -46,6 +46,7 @@
 
 #include <sycl/sycl.hpp>
 
+#include "InteropGLBuffer.hpp"
 #include "sim.hpp"
 
 using num_t = float;
@@ -175,7 +176,7 @@ class NBodyApp : public Magnum::Platform::Application {
 
   Magnum::Matrix4 m_view;
   Magnum::Matrix4 m_viewProjection;
-  Corrade::Containers::Array<char> m_vboStorage;
+  InteropGLBuffer<char> m_vbo{};
   Magnum::GL::Mesh m_mesh;
   Magnum::GL::Texture2D m_star_tex;
   NBodyShader m_shader;
@@ -238,8 +239,7 @@ class NBodyApp : public Magnum::Platform::Application {
   // bodies
   void init_gl_bufs() {
     const size_t arraySize{m_n_bodies * sizeof(sycl::vec<num_t, 3>)};
-    m_vboStorage =
-        Corrade::Containers::Array<char>(Corrade::ValueInit, 2 * arraySize);
+    m_vbo = InteropGLBuffer<char>{2 * arraySize};
     m_mesh = Magnum::GL::Mesh{Magnum::GL::MeshPrimitive::Points};
     m_mesh.setCount(m_n_bodies);
   }
@@ -377,20 +377,13 @@ class NBodyApp : public Magnum::Platform::Application {
 
     // Update star buffer data with new positions
     const size_t arraySize{m_n_bodies * sizeof(sycl::vec<num_t, 3>)};
-    m_sim.with_mapped(read_bufs_t<1>{},
-                      [&](sycl::vec<num_t, 3> const* positions) {
-                        std::copy_n(reinterpret_cast<const char*>(positions),
-                                    arraySize, m_vboStorage.data());
-                      });
-    m_sim.with_mapped(read_bufs_t<0>{},
-                      [&](sycl::vec<num_t, 3> const* velocities) {
-                        std::copy_n(reinterpret_cast<const char*>(velocities),
-                                    arraySize, m_vboStorage.data() + arraySize);
-                      });
 
-    Magnum::GL::Buffer vbo{m_vboStorage};
-    m_mesh.addVertexBuffer(vbo, 0, NBodyShader::Position{})
-        .addVertexBuffer(vbo, arraySize, NBodyShader::Velocity{});
+    sycl::event::wait_and_throw(
+        {m_sim.copyTo<1>(m_vbo.getStorage()),
+         m_sim.copyTo<0>(m_vbo.getStorage() + arraySize)});
+
+    m_mesh.addVertexBuffer(m_vbo, 0, NBodyShader::Position{})
+        .addVertexBuffer(m_vbo, arraySize, NBodyShader::Velocity{});
 
     // Draw bodies
     m_shader.setView({&m_view, 1})
