@@ -3,7 +3,7 @@
 // or https://developer.codeplay.com/products/oneapi/amd/latest/guides/MPI-guide
 // for build/run instructions
 
-// This example shows how to use GPU-aware MPI with SYCL USM memory using a
+// This example shows how to use device-aware MPI with SYCL USM memory using a
 // simple send-receive pattern.
 
 #include <assert.h>
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* -------------------------------------------------------------------------------------------
-      SYCL Initialization, which internally sets the GPU device.
+      SYCL Initialization, which internally sets the device.
   --------------------------------------------------------------------------------------------*/
 
   sycl::queue q{};

@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* -------------------------------------------------------------------------------------------
-    SYCL Initialization, which internally sets the GPU device.
+    SYCL Initialization, which internally sets the device.
   --------------------------------------------------------------------------------------------*/
 
   sycl::queue q{};

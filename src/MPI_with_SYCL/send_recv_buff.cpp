@@ -3,47 +3,48 @@
 // or https://developer.codeplay.com/products/oneapi/amd/latest/guides/MPI-guide
 // for build/run instructions
 
-// This example shows how to use GPU-aware MPI with SYCL Buffer memory using a
-// simple send-receive pattern.
-// By default this sample assumes that the backend used is cuda. To use hip
-// simply define the MACRO USE_HIP. Or to use level_zero define the MACRO
-// USE_L0.
+// This example shows how to use device-aware MPI with SYCL Buffer memory using
+// a simple send-receive pattern. By default this sample assumes that the
+// backend used is cuda. To use hip simply define the MACRO USE_HIP. Or to use
+// level_zero define the MACRO USE_L0.
 
 #include <assert.h>
 #include <mpi.h>
 
 #include <sycl/sycl.hpp>
 
-/// Get the native GPU device pointer from a SYCL accessor
-template<typename Accessor>
-inline void* getDevicePointer(const Accessor& acc, const sycl::interop_handle& ih, sycl::backend backend) {
-  void* gpu_ptr{nullptr};
-  switch (backend) {
-    #if SYCL_EXT_ONEAPI_BACKEND_CUDA
-    case sycl::backend::ext_oneapi_cuda: {
-      gpu_ptr = reinterpret_cast<void*>(
+/// Get the native device pointer from a SYCL accessor
+template <typename Accessor>
+inline void *getDevicePointer(const Accessor &acc,
+                              const sycl::interop_handle &ih) {
+  void *device_ptr{nullptr};
+  switch (ih.get_backend()) {
+#if SYCL_EXT_ONEAPI_BACKEND_CUDA
+  case sycl::backend::ext_oneapi_cuda: {
+    device_ptr = reinterpret_cast<void *>(
         ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
-      break;
-    }
-    #endif
-    #if SYCL_EXT_ONEAPI_BACKEND_HIP
-    case sycl::backend::ext_oneapi_hip: {
-      gpu_ptr = reinterpret_cast<void*>(
-        ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
-      break;
-    }
-    #endif
-    case sycl::backend::ext_oneapi_level_zero: {
-      gpu_ptr = reinterpret_cast<void*>(
-        ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
-      break;
-    }
-    default: {
-      throw std::runtime_error{"Unsupported backend"};
-      break;
-    }
+    break;
   }
-  return gpu_ptr;
+#endif
+#if SYCL_EXT_ONEAPI_BACKEND_HIP
+  case sycl::backend::ext_oneapi_hip: {
+    device_ptr = reinterpret_cast<void *>(
+        ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
+    break;
+  }
+#endif
+  case sycl::backend::ext_oneapi_level_zero: {
+    device_ptr = reinterpret_cast<void *>(
+        ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
+    break;
+  }
+  default: {
+    throw std::runtime_error{"Backend does not yet support buffer interop "
+                             "required for device-aware MPI with sycl::buffer"};
+    break;
+  }
+  }
+  return device_ptr;
 }
 
 int main(int argc, char *argv[]) {
@@ -61,17 +62,16 @@ int main(int argc, char *argv[]) {
 
   if (size != 2) {
     if (rank == 0) {
-      printf(
-          "This program requires exactly 2 MPI ranks, "
-          "but you are attempting to use %d! Exiting...\n",
-          size);
+      printf("This program requires exactly 2 MPI ranks, "
+             "but you are attempting to use %d! Exiting...\n",
+             size);
     }
     MPI_Finalize();
     exit(0);
   }
 
   /* ---------------------------------------------------------------------------
-    SYCL Initialization, which internally sets the GPU device.
+    SYCL Initialization, which internally sets the device.
   ----------------------------------------------------------------------------*/
 
   sycl::queue q{};
@@ -80,7 +80,6 @@ int main(int argc, char *argv[]) {
   const int nelem = 20;
   const size_t nsize = nelem * sizeof(int);
   std::vector<int> data(nelem, -1);
-  sycl::backend backend{q.get_backend()};
 
   {
     /* -------------------------------------------------------------------------
@@ -101,16 +100,16 @@ int main(int argc, char *argv[]) {
         auto kern = [=](sycl::id<1> id) { acc[id] *= 2; };
         h.parallel_for(sycl::range<1>{nelem}, kern);
       };
-      // When using buffers with GPU-aware MPI, a host_task must be used with a
-      // sycl::interop_handle in the following way. This host task command group
-      // uses MPI_Send to send the data to rank 1.
+      // When using buffers with device-aware MPI, a host_task must be used with
+      // a sycl::interop_handle in the following way. This host task command
+      // group uses MPI_Send to send the data to rank 1.
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          void* gpu_ptr = getDevicePointer(acc, ih, backend);
+          void *device_ptr = getDevicePointer(acc, ih);
           MPI_Status status;
           // Send the data from rank 0 to rank 1.
-          MPI_Send(gpu_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
+          MPI_Send(device_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
           printf("Sent %d elements from %d to 1\n", nelem, rank);
         });
       };
@@ -124,10 +123,11 @@ int main(int argc, char *argv[]) {
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          void* gpu_ptr = getDevicePointer(acc, ih, backend);
+          void *device_ptr = getDevicePointer(acc, ih);
           MPI_Status status;
           // Receive the data sent from rank 0.
-          MPI_Recv(gpu_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD, &status);
+          MPI_Recv(device_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD,
+                   &status);
           printf("received status==%d\n", status.MPI_ERROR);
         });
       };
@@ -138,7 +138,8 @@ int main(int argc, char *argv[]) {
   // Check the values. Since this is outside the scope where the buffer was
   // created, the data array is automatically updated on the host.
   if (rank == 1) {
-    for (int i = 0; i < nelem; ++i) assert(data[i] == -2);
+    for (int i = 0; i < nelem; ++i)
+      assert(data[i] == -2);
   }
 
   MPI_Finalize();
