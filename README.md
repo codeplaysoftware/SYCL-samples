@@ -30,12 +30,16 @@ direction of the mouse travel. The fluid fades slowly over time so as not to fil
 the container.
 
 ## Non-graphical Demos
-### MPI for CUDA Backend 
-MPI, the Message Passing Interface, is a standard API for communicating data via 
-messages between distributed processes that is commonly used in HPC to build 
-applications that can scale to multi-node computer clusters.
+### MPI with SYCL
+MPI, the Message Passing Interface, is a standard API for communicating data
+via messages between distributed processes that is commonly used in HPC to
+build applications that can scale to multi-node computer clusters.
 The three minimal code examples demonstrate how some GPUs can support
-CUDA-Aware MPI together with SYCL.
+GPU-Aware MPI together with SYCL. This enables fast device to device memory
+transfers and collective operations without going via the host.
+More generally the USM code samples are also portable across any SYCL backend
+(including CPU devices) that support the MPI standard. For this reason we
+use the more general term "device-aware" MPI.
 
 The first example uses the SYCL Unified Shared Memory (USM) memory model 
 (`send_recv_usm`). The second uses the Buffer (`send_recv_buff`) model. Each
@@ -50,17 +54,39 @@ using the SYCL 2020 reduction interface. Finally, the partial results from each
 rank are reduced to a final scalar value, `res`, using Reduce. Finally, the 
 initial data is updated using Gather.
 
-These three examples form part of the [Codeplay oneAPI for NVIDIA GPUs plugin 
-documentation](https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide).
-The documentation refers to the gpu-aware MPI guide for the CUDA backend.
+These three examples form part of the Codeplay oneAPI for [NVIDIA GPUs](https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide)
+and [AMD GPUs](https://developer.codeplay.com/products/oneapi/amd/latest/guides/MPI-guide)
+plugin documentation.
+These two links point to the device-aware MPI guide for the CUDA/HIP backends
+respectively.
 
-Building the MPI-CUDA examples requires the CUDA backend to be enabled and the
-MPI headers and library to be present on the system. This demo will be
-automatically skipped when not building for the CUDA backend or when MPI is not
-installed/detected. A message saying this will appear in the CMake configuration
-output. Additionally, in order to run the examples, the MPI implementation needs
-to be CUDA-aware. This is only detectable at runtime, so the examples may build
-fine but crash on execution if the linked MPI library isn't CUDA-aware.
+Building the MPI examples requires that the correct
+MPI headers and library be present on the system, and that you have set your
+CMAKE_CXX_COMPILER correctly (If you are using an MPI wrapper such as `mpicxx`).
+This demo will be automatically skipped when MPI is not installed/detected.
+Sometimes CMake fails to find the correct MPI library. A message saying this
+will appear in the CMake configuration output. If this occurs then you
+should adjust the CMakeLists.txt manually depending on the location of your
+MPI installation. E.g.
+
+```bash
+--- a/src/MPI_with_SYCL/CMakeLists.txt
++++ b/src/MPI_with_SYCL/CMakeLists.txt
+@@ -5,7 +5,7 @@ else()
+     message(STATUS "Found MPI, configuring the MPI_for_CUDA_backend demo")
+     foreach(TARGET send_recv_usm send_recv_buff scatter_reduce_gather)
+         add_executable(${TARGET} ${TARGET}.cpp)
+-        target_compile_options(${TARGET} PUBLIC ${SYCL_FLAGS} ${MPI_INCLUDE_DIRS})
+-        target_link_options(${TARGET} PUBLIC ${SYCL_FLAGS} ${MPI_LIBRARIES})
++        target_compile_options(${TARGET} PUBLIC ${SYCL_FLAGS} ${MPI_INCLUDE_DIRS} -I/opt/cray/pe/mpich/8.1.25/ofi/cray/10.0/include/)
++        target_link_options(${TARGET} PUBLIC ${SYCL_FLAGS} ${MPI_LIBRARIES} -L/opt/cray/pe/mpich/8.1.25/ofi/cray/10.0/lib)
+     endforeach()
+ endif()
+```
+
+Additionally, in order to run the examples, the MPI implementation needs
+to be device-aware. This is only detectable at runtime, so the examples may build
+fine but crash on execution if the linked MPI library isn't device-aware.
 
 ### Parallel Inclusive Scan
 Implementation of a parallel inclusive scan with a given associative binary 
