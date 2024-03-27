@@ -14,6 +14,38 @@
 
 #include <sycl/sycl.hpp>
 
+/// Get the native GPU device pointer from a SYCL accessor
+template<typename Accessor>
+inline void* getDevicePointer(const Accessor& acc, const sycl::interop_handle& ih, sycl::backend backend) {
+  void* gpu_ptr{nullptr};
+  switch (backend) {
+    #if SYCL_EXT_ONEAPI_BACKEND_CUDA
+    case sycl::backend::ext_oneapi_cuda: {
+      gpu_ptr = reinterpret_cast<void*>(
+        ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
+      break;
+    }
+    #endif
+    #if SYCL_EXT_ONEAPI_BACKEND_HIP
+    case sycl::backend::ext_oneapi_hip: {
+      gpu_ptr = reinterpret_cast<void*>(
+        ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
+      break;
+    }
+    #endif
+    case sycl::backend::ext_oneapi_level_zero: {
+      gpu_ptr = reinterpret_cast<void*>(
+        ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
+      break;
+    }
+    default: {
+      throw std::runtime_error{"Unsupported backend"};
+      break;
+    }
+  }
+  return gpu_ptr;
+}
+
 int main(int argc, char *argv[]) {
   /* ---------------------------------------------------------------------------
     MPI Initialization.
@@ -48,6 +80,7 @@ int main(int argc, char *argv[]) {
   const int nelem = 20;
   const size_t nsize = nelem * sizeof(int);
   std::vector<int> data(nelem, -1);
+  sycl::backend backend{q.get_backend()};
 
   {
     /* -------------------------------------------------------------------------
@@ -74,18 +107,7 @@ int main(int argc, char *argv[]) {
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-// get the native GPU device pointer from the SYCL accessor.
-#if defined(USE_HIP)
-          auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
-#elif defined(USE_L0)
-          auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
-#else
-          auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
-#endif
-
+          void* gpu_ptr = getDevicePointer(acc, ih, backend);
           MPI_Status status;
           // Send the data from rank 0 to rank 1.
           MPI_Send(gpu_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
@@ -102,18 +124,7 @@ int main(int argc, char *argv[]) {
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-        // get the native GPU device pointer from the SYCL accessor.
-#if defined(USE_HIP)
-          auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
-#elif defined(USE_L0)
-          auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
-#else
-          auto gpu_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
-#endif
-
+          void* gpu_ptr = getDevicePointer(acc, ih, backend);
           MPI_Status status;
           // Receive the data sent from rank 0.
           MPI_Recv(gpu_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD, &status);
