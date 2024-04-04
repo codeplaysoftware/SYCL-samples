@@ -242,6 +242,16 @@ class GravSim {
     func(std::get<0>(acc).get_pointer());
   }
 
+  // Copy buffer contents into the dest pointer (host or device)
+  template <size_t VarId>
+  sycl::event copyTo(void* dest) {
+    return m_q.submit([&](sycl::handler& cgh) {
+      cgh.copy(
+          std::get<0>(m_bufs.read().gen_read_accs(cgh, read_bufs_t<VarId>{})),
+          dest);
+    });
+  }
+
  private:
   void internal_step() {
     m_q.submit([&](sycl::handler& cgh) {
