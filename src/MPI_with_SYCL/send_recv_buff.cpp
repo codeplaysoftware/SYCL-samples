@@ -18,29 +18,30 @@ inline void *getDevicePointer(const Accessor &acc,
   void *device_ptr{nullptr};
   switch (ih.get_backend()) {
 #if SYCL_EXT_ONEAPI_BACKEND_CUDA
-  case sycl::backend::ext_oneapi_cuda: {
-    device_ptr = reinterpret_cast<void *>(
-        ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
-    break;
-  }
+    case sycl::backend::ext_oneapi_cuda: {
+      device_ptr = reinterpret_cast<void *>(
+          ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
+      break;
+    }
 #endif
 #if SYCL_EXT_ONEAPI_BACKEND_HIP
-  case sycl::backend::ext_oneapi_hip: {
-    device_ptr = reinterpret_cast<void *>(
-        ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
-    break;
-  }
+    case sycl::backend::ext_oneapi_hip: {
+      device_ptr = reinterpret_cast<void *>(
+          ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
+      break;
+    }
 #endif
-  case sycl::backend::ext_oneapi_level_zero: {
-    device_ptr = reinterpret_cast<void *>(
-        ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
-    break;
-  }
-  default: {
-    throw std::runtime_error{"Backend does not yet support buffer interop "
-                             "required for device-aware MPI with sycl::buffer"};
-    break;
-  }
+    case sycl::backend::ext_oneapi_level_zero: {
+      device_ptr = reinterpret_cast<void *>(
+          ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
+      break;
+    }
+    default: {
+      throw std::runtime_error{
+          "Backend does not yet support buffer interop "
+          "required for device-aware MPI with sycl::buffer"};
+      break;
+    }
   }
   return device_ptr;
 }
@@ -60,9 +61,10 @@ int main(int argc, char *argv[]) {
 
   if (size != 2) {
     if (rank == 0) {
-      printf("This program requires exactly 2 MPI ranks, "
-             "but you are attempting to use %d! Exiting...\n",
-             size);
+      printf(
+          "This program requires exactly 2 MPI ranks, "
+          "but you are attempting to use %d! Exiting...\n",
+          size);
     }
     MPI_Finalize();
     exit(0);
@@ -136,8 +138,7 @@ int main(int argc, char *argv[]) {
   // Check the values. Since this is outside the scope where the buffer was
   // created, the data array is automatically updated on the host.
   if (rank == 1) {
-    for (int i = 0; i < nelem; ++i)
-      assert(data[i] == -2);
+    for (int i = 0; i < nelem; ++i) assert(data[i] == -2);
   }
 
   MPI_Finalize();
