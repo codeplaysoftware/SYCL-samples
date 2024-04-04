@@ -107,7 +107,6 @@ int main(int argc, char *argv[]) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
           void *device_ptr = getDevicePointer(acc, ih);
-          MPI_Status status;
           // Send the data from rank 0 to rank 1.
           MPI_Send(device_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
           printf("Sent %d elements from %d to 1\n", nelem, rank);
