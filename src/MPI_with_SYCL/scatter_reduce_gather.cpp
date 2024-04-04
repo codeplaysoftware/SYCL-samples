@@ -1,8 +1,7 @@
-// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda
-// -Xsycl-target-backend --cuda-gpu-arch=sm_xx scatter_reduce_gather.cpp -o res`
-// Where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
-// --cuda-gpu-arch=` flags are not explicitly provided the lowest supported CC
-// will be used: sm_50.
+// Refer to
+// https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide
+// or https://developer.codeplay.com/products/oneapi/amd/latest/guides/MPI-guide
+// for build/run instructions
 
 // This sample runs a common HPC programming idiom in a simplified form. Firstly
 // a data array is scattered to two processes associated with
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* -------------------------------------------------------------------------------------------
-    SYCL Initialization, which internally sets the CUDA device.
+    SYCL Initialization, which internally sets the device.
   --------------------------------------------------------------------------------------------*/
 
   sycl::queue q{};

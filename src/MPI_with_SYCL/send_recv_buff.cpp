@@ -1,16 +1,50 @@
-// Compile with `mpicxx -fsycl -fsycl-targets=nvptx64-nvidia-cuda
-// -Xsycl-target-backend --cuda-gpu-arch=sm_xx send_recv_buff.cpp -o res`
-// where sm_xx is the Compute Capability (CC). If the `-Xsycl-target-backend
-// --cuda-gpu-arch=` flags are not explicitly provided the lowest supported CC
-// will be used: sm_50.
+// Refer to
+// https://developer.codeplay.com/products/oneapi/nvidia/latest/guides/MPI-guide
+// or https://developer.codeplay.com/products/oneapi/amd/latest/guides/MPI-guide
+// for build/run instructions
 
-// This example shows how to use CUDA-aware MPI with SYCL Buffer memory using a
-// simple send-receive pattern.
+// This example shows how to use device-aware MPI with SYCL Buffer memory using
+// a simple send-receive pattern.
 
 #include <assert.h>
 #include <mpi.h>
 
 #include <sycl/sycl.hpp>
+
+/// Get the native device pointer from a SYCL accessor
+template <typename Accessor>
+inline void *getDevicePointer(const Accessor &acc,
+                              const sycl::interop_handle &ih) {
+  void *device_ptr{nullptr};
+  switch (ih.get_backend()) {
+#if SYCL_EXT_ONEAPI_BACKEND_CUDA
+    case sycl::backend::ext_oneapi_cuda: {
+      device_ptr = reinterpret_cast<void *>(
+          ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
+      break;
+    }
+#endif
+#if SYCL_EXT_ONEAPI_BACKEND_HIP
+    case sycl::backend::ext_oneapi_hip: {
+      device_ptr = reinterpret_cast<void *>(
+          ih.get_native_mem<sycl::backend::ext_oneapi_hip>(acc));
+      break;
+    }
+#endif
+    case sycl::backend::ext_oneapi_level_zero: {
+      device_ptr = reinterpret_cast<void *>(
+          ih.get_native_mem<sycl::backend::ext_oneapi_level_zero>(acc));
+      break;
+    }
+    default: {
+      throw std::runtime_error{
+          "Backend does not yet support buffer interop "
+          "required for device-aware MPI with sycl::buffer"};
+      break;
+    }
+  }
+  return device_ptr;
+}
 
 int main(int argc, char *argv[]) {
   /* ---------------------------------------------------------------------------
@@ -37,7 +71,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* ---------------------------------------------------------------------------
-    SYCL Initialization, which internally sets the CUDA device.
+    SYCL Initialization, which internally sets the device.
   ----------------------------------------------------------------------------*/
 
   sycl::queue q{};
@@ -66,19 +100,15 @@ int main(int argc, char *argv[]) {
         auto kern = [=](sycl::id<1> id) { acc[id] *= 2; };
         h.parallel_for(sycl::range<1>{nelem}, kern);
       };
-      // When using buffers with CUDA-aware MPI, a host_task must be used with a
-      // sycl::interop_handle in the following way. This host task command group
-      // uses MPI_Send to send the data to rank 1.
+      // When using buffers with device-aware MPI, a host_task must be used with
+      // a sycl::interop_handle in the following way. This host task command
+      // group uses MPI_Send to send the data to rank 1.
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          // get the native CUDA device pointer from the SYCL accessor.
-          auto cuda_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
-
-          MPI_Status status;
+          void *device_ptr = getDevicePointer(acc, ih);
           // Send the data from rank 0 to rank 1.
-          MPI_Send(cuda_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
+          MPI_Send(device_ptr, nsize, MPI_BYTE, 1, tag, MPI_COMM_WORLD);
           printf("Sent %d elements from %d to 1\n", nelem, rank);
         });
       };
@@ -92,13 +122,11 @@ int main(int argc, char *argv[]) {
       auto ht = [&](sycl::handler &h) {
         sycl::accessor acc{buff, h};
         h.host_task([=](sycl::interop_handle ih) {
-          // get the native CUDA device pointer from the SYCL accessor.
-          auto cuda_ptr = reinterpret_cast<int *>(
-              ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc));
-
+          void *device_ptr = getDevicePointer(acc, ih);
           MPI_Status status;
           // Receive the data sent from rank 0.
-          MPI_Recv(cuda_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD, &status);
+          MPI_Recv(device_ptr, nsize, MPI_BYTE, 0, tag, MPI_COMM_WORLD,
+                   &status);
           printf("received status==%d\n", status.MPI_ERROR);
         });
       };
