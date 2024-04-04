@@ -73,7 +73,7 @@ MPI installation. E.g.
 --- a/src/MPI_with_SYCL/CMakeLists.txt
 +++ b/src/MPI_with_SYCL/CMakeLists.txt
 @@ -5,7 +5,7 @@ else()
-     message(STATUS "Found MPI, configuring the MPI_for_CUDA_backend demo")
+     message(STATUS "Found MPI, configuring the MPI_with_SYCL demo")
      foreach(TARGET send_recv_usm send_recv_buff scatter_reduce_gather)
          add_executable(${TARGET} ${TARGET}.cpp)
 -        target_compile_options(${TARGET} PUBLIC ${SYCL_FLAGS} ${MPI_INCLUDE_DIRS})

@@ -4,9 +4,7 @@
 // for build/run instructions
 
 // This example shows how to use device-aware MPI with SYCL Buffer memory using
-// a simple send-receive pattern. By default this sample assumes that the
-// backend used is cuda. To use hip simply define the MACRO USE_HIP. Or to use
-// level_zero define the MACRO USE_L0.
+// a simple send-receive pattern.
 
 #include <assert.h>
 #include <mpi.h>
