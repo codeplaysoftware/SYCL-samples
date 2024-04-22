@@ -42,12 +42,18 @@ set(SYCL_TARGETS "")
 if(${ENABLE_CUDA})
     string(JOIN "," SYCL_TARGETS "${SYCL_TARGETS}" "nvptx64-nvidia-cuda")
     set(DEFAULT_CUDA_COMPUTE_CAPABILITY "50")
-    execute_process(
-        COMMAND bash -c "which nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1 | tr -d '.'"
-        OUTPUT_VARIABLE CUDA_COMPUTE_CAPABILITY
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(CUDA_COMPUTE_CAPABILITY "" CACHE BOOL
+        "CUDA architecture (compute capability), e.g. sm_80. Default value is auto-configured using nvidia-smi.")
+    # Auto-configure if not specified by user
     if ("${CUDA_COMPUTE_CAPABILITY}" STREQUAL "")
-        message(WARNING "Failed to autoconfigure CUDA Compute Capability using nvidia-smi. Will default to sm_${DEFAULT_CUDA_COMPUTE_CAPABILITY}")
+        execute_process(
+            COMMAND bash -c "which nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1 | tr -d '.'"
+            OUTPUT_VARIABLE CUDA_COMPUTE_CAPABILITY
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    # Warn if not specified and failed to auto-configure
+    if ("${CUDA_COMPUTE_CAPABILITY}" STREQUAL "")
+        message(WARNING "Failed to autoconfigure CUDA_COMPUTE_CAPABILITY using nvidia-smi. Will default to sm_${DEFAULT_CUDA_COMPUTE_CAPABILITY}")
         set(CUDA_COMPUTE_CAPABILITY ${DEFAULT_CUDA_COMPUTE_CAPABILITY} CACHE STRING "CUDA Compute Capability")
     else()
         message(STATUS "Enabled SYCL target CUDA with Compute Capability sm_${CUDA_COMPUTE_CAPABILITY}")
@@ -60,12 +66,18 @@ endif()
 if(${ENABLE_HIP})
     string(JOIN "," SYCL_TARGETS "${SYCL_TARGETS}" "amdgcn-amd-amdhsa")
     set(DEFAULT_HIP_GFX_ARCH "gfx906")
-    execute_process(
-        COMMAND bash -c "which rocminfo >/dev/null && rocminfo | grep -o 'gfx[0-9]*' | head -n 1"
-        OUTPUT_VARIABLE HIP_GFX_ARCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(HIP_GFX_ARCH "" CACHE BOOL
+        "HIP architecture tag, e.g. gfx90a. Default value is auto-configured using rocminfo.")
+    # Auto-configure if not specified by user
+    if ("${CUDA_COMPUTE_CAPABILITY}" STREQUAL "")
+        execute_process(
+            COMMAND bash -c "which rocminfo >/dev/null && rocminfo | grep -o 'gfx[0-9]*' | head -n 1"
+            OUTPUT_VARIABLE HIP_GFX_ARCH
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    # Warn if not specified and failed to auto-configure
     if ("${HIP_GFX_ARCH}" STREQUAL "")
-        message(WARNING "Failed to autoconfigure HIP gfx arch using rocminfo. Will default to ${DEFAULT_HIP_GFX_ARCH}")
+        message(WARNING "Failed to autoconfigure HIP_GFX_ARCH using rocminfo. Will default to ${DEFAULT_HIP_GFX_ARCH}")
         set(HIP_GFX_ARCH ${DEFAULT_HIP_GFX_ARCH} CACHE STRING "HIP gfx arch")
     else()
         message(STATUS "Enabled SYCL target HIP with gfx arch ${HIP_GFX_ARCH}")
