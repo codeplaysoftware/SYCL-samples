@@ -85,8 +85,12 @@ MPI installation. E.g.
 ```
 
 Additionally, in order to run the examples, the MPI implementation needs
-to be device-aware. This is only detectable at runtime, so the examples may build
-fine but crash on execution if the linked MPI library isn't device-aware.
+to be device-aware. The CMake configuration attempts to build and execute the
+simplest example to evaluate whether the found MPI library supports any of the
+enabled backends. This demo will be automatically skipped if this check does not
+pass and a corresponding message will appear in the CMake configuration output.
+The result of this check can be overwritten with the `-DMPI_DEVICE_AWARE=ON/OFF`
+option.
 
 ### Parallel Inclusive Scan
 Implementation of a parallel inclusive scan with a given associative binary 

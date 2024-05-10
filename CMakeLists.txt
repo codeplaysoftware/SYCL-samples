@@ -2,7 +2,7 @@
 # This work is licensed under the Apache License, Version 2.0.
 # For a copy, see http://www.apache.org/licenses/LICENSE-2.0
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 project(SYCL-samples)
 
 # Set build type to Release if unset
