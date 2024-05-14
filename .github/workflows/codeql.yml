@@ -59,13 +59,16 @@ jobs:
         # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
 
     container:
-      image: ghcr.io/codeplaysoftware/sycl-samples:latest
+      image: intel/oneapi-basekit:latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: "recursive"
+
+    # Handle git 'dubious ownership/safe.directory' container warnings (reduces related CodeQL verbosity)
+    - name: Add safe Git directory
+      if: matrix.build-mode == 'manual'
+      run: git config --global --add safe.directory /__w/SYCL-samples/SYCL-samples
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -87,24 +90,21 @@ jobs:
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
 
-    # Configure Cmake & Build - inc. graphics
+    # Configure Cmake & Build - no graphics
 
-    - name: Configure CMake
+    - name: Configure CMake (no graphics)
       if: matrix.build-mode == 'manual'
       run: >
         cmake -B ${{github.workspace}}/build
         -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-        -DCMAKE_CXX_COMPILER=clang++
-        -DENABLE_GRAPHICS=ON
-        -DENABLE_SPIR=ON
-        -DENABLE_CUDA=ON -DCUDA_COMPUTE_CAPABILITY=80
-        -DENABLE_HIP=ON -DHIP_GFX_ARCH=gfx90a
+        -DCMAKE_CXX_COMPILER=icpx
+        -DENABLE_GRAPHICS=OFF
+        -DENABLE_SPIR=ON -DENABLE_CUDA=OFF -DENABLE_HIP=OFF
         -DCMAKE_CXX_FLAGS='-Wall -Wextra -Wpedantic -Werror'
-        -G Ninja
 
-    - name: Build
+    - name: Build (no graphics)
       if: matrix.build-mode == 'manual'
-      run: cmake --build ${{github.workspace}}/build -- -k 0
+      run: cmake --build ${{github.workspace}}/build -- -k -j
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
