@@ -163,5 +163,6 @@ class FluidSimulationApp : public Magnum::Platform::Application {
   Magnum::Shaders::FlatGL2D shader_;
 };
 
+
 // Magnum app initialization.
 MAGNUM_APPLICATION_MAIN(FluidSimulationApp)
