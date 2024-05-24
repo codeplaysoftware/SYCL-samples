@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Get basic dependencies from Ubuntu repositories
 RUN apt update && apt -y install wget gpg git cmake ninja-build \
