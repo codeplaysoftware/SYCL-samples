@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: clang-format
-        uses: jidicula/clang-format-action@v4.11.0
+        uses: jidicula/clang-format-action@v4.13.0
         with:
           clang-format-version: '17'
           check-path: 'src'
@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Path filter
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
