@@ -1,4 +1,7 @@
 # SYCL-samples
+
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/codeplaysoftware/SYCL-samples/badge)](https://scorecard.dev/viewer/?uri=github.com/codeplaysoftware/SYCL-samples)
+
 A collection of samples and graphical demos written using
 [SYCL](https://www.khronos.org/sycl/).
 
