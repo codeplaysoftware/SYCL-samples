@@ -44,8 +44,16 @@ int main(int argc, char *argv[]) {
   /* -------------------------------------------------------------------------------------------
     SYCL Initialization, which internally sets the device.
   --------------------------------------------------------------------------------------------*/
-
-  sycl::queue q{};
+  // For simplicity the below usage of `sycl::queue` uses a single gpu shared
+  // between the two ranks. In order to use a separate gpu for each rank, simply
+  // use `Devs[rank]` instead. Note that it is important to manually instantiate a
+  // sycl::context in this way using a single device per rank. This implicitly
+  // sets the gpu device that each MPI rank will use, avoiding MPI/SYCL
+  // interoperability misuse in the case that the sycl runtime uses the default
+  // `sycl::context` which instantiates all available devices; and would lead to
+  // MPI calls leaking data to unused devices.
+  sycl::context Context(Devs[0]);
+  sycl::queue q{Context, Devs[0]};
 
   size_t N = 500000;
   std::vector<double> A(N, 1.0);
