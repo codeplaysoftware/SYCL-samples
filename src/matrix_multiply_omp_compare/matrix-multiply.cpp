@@ -24,7 +24,8 @@
  *  and differences between them.
  *  See block_host for the OpenMP implementation. */
 
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
+
 #include <chrono>
 #include <cmath>
 #include <ctime>
