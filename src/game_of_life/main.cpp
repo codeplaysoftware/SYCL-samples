@@ -18,6 +18,8 @@
  *
  **************************************************************************/
 
+#include "sim.hpp"
+
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Texture.h>
@@ -30,12 +32,10 @@
 #include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Trade/MeshData.h>
 
-#include <chrono>
-#include <thread>
-
 #include <sycl/sycl.hpp>
 
-#include "sim.hpp"
+#include <chrono>
+#include <thread>
 
 constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
 

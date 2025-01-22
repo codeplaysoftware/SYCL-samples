@@ -31,7 +31,7 @@
 #include <ctime>
 #include <iostream>
 
-using namespace cl::sycl;
+using namespace sycl;
 
 class mxm_kernel;
 
@@ -112,7 +112,7 @@ inline bool isPowerOfTwo(int x) { return (x & (x - 1)) == 0; }
  * Note that this example only works for powers of two.
  * */
 template <typename T>
-bool local_mxm(cl::sycl::queue& q, T* MA, T* MB, T* MC, int matSize) {
+bool local_mxm(sycl::queue& q, T* MA, T* MB, T* MC, int matSize) {
   // Make sure it is power of two before running
   if (!isPowerOfTwo(matSize)) {
     std::cout << " This example only works with power of two sizes "
@@ -122,7 +122,7 @@ bool local_mxm(cl::sycl::queue& q, T* MA, T* MB, T* MC, int matSize) {
 
   auto device = q.get_device();
   auto maxBlockSize =
-      device.get_info<cl::sycl::info::device::max_work_group_size>();
+      device.get_info<sycl::info::device::max_work_group_size>();
   auto blockSize = prevPowerOfTwo(std::sqrt(maxBlockSize));
   std::cout << " The Device Max Work Group Size is : " << maxBlockSize
             << std::endl;
@@ -325,14 +325,13 @@ int main(int argc, char* argv[]) {
          * to capture potential asynchronous errors. This function will be
          * called every time there is an asynchronous error on the queue (i.e.
          * some error occurs while the queue is executing kernels) and one of
-         * cl::sycl::queue::throw() or cl::sycl::queue::wait_and_throw() is
-         * called. */
+         * sycl::queue::throw() or sycl::queue::wait_and_throw() is called. */
         queue q([&](exception_list eL) {
           try {
             for (auto& e : eL) {
               std::rethrow_exception(e);
             }
-          } catch (cl::sycl::exception e) {
+          } catch (sycl::exception e) {
             std::cout << " An exception has been thrown: " << e.what()
                       << std::endl;
           }

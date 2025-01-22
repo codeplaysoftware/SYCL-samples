@@ -18,6 +18,8 @@
  *
  **************************************************************************/
 
+#include "mandel.hpp"
+
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Texture.h>
@@ -31,8 +33,6 @@
 #include <Magnum/Trade/MeshData.h>
 
 #include <sycl/sycl.hpp>
-
-#include "mandel.hpp"
 
 constexpr size_t WIDTH = 800;
 constexpr size_t HEIGHT = 600;

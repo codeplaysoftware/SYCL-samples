@@ -18,6 +18,9 @@
  *
  **************************************************************************/
 
+#include "InteropGLBuffer.hpp"
+#include "sim.hpp"
+
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/GL/AbstractShaderProgram.h>
@@ -28,6 +31,7 @@
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/GL/Version.h>
+#include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/ImageView.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Angle.h>
@@ -40,14 +44,10 @@
 #include <Magnum/Trade/ImageData.h>
 #include <Magnum/Trade/MeshData.h>
 
-#include <Magnum/ImGuiIntegration/Context.hpp>
-#include <chrono>
-#include <fstream>
-
 #include <sycl/sycl.hpp>
 
-#include "InteropGLBuffer.hpp"
-#include "sim.hpp"
+#include <chrono>
+#include <fstream>
 
 using num_t = float;
 constexpr num_t PI{3.141592653589793238462643383279502884197169399};

@@ -20,11 +20,11 @@
 
 #pragma once
 
-#include <random>
+#include "../include/double_buf.hpp"
 
 #include <sycl/sycl.hpp>
 
-#include "../include/double_buf.hpp"
+#include <random>
 
 enum class CellState : unsigned int {
   LIVE = 1,

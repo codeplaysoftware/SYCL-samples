@@ -18,6 +18,8 @@
  *
  **************************************************************************/
 
+#include "fluid.h"
+
 #include <Corrade/Containers/StringStlView.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
@@ -32,8 +34,6 @@
 #include <Magnum/Trade/MeshData.h>
 
 #include <sycl/sycl.hpp>
-
-#include "fluid.h"
 
 constexpr Magnum::PixelFormat PIXELFORMAT{Magnum::PixelFormat::RGBA8Unorm};
 

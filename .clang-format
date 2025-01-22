@@ -1,18 +1,13 @@
 BasedOnStyle: Google
+IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex:           '^<sycl/.*>$'
-    Priority:        3
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '^<.*\.h>'
+  - Regex:           '^".*"'
     Priority:        1
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '^<.*'
+  - Regex:           '^<sycl/'
     Priority:        2
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '.*'
+    SortPriority:    3
+  - Regex:           '<[[:alnum:]_/]+\.(h|hpp)>'
+    Priority:        3
+    SortPriority:    2
+  - Regex:           '<^[.]+>'
     Priority:        4
-    SortPriority:    0
-    CaseSensitive:   false
