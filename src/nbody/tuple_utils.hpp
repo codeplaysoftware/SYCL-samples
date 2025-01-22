@@ -111,7 +111,7 @@ namespace {
 
   template <typename Tuple, size_t... Ids>
   auto squash_tuple_help(Tuple && tpl, index_sequence<Ids...>)
-      -> decltype(std::make_tuple(std::get<Ids>(std::forward<Tuple>(tpl))...)) {
+      ->decltype(std::make_tuple(std::get<Ids>(std::forward<Tuple>(tpl))...)) {
     return std::make_tuple(std::get<Ids>(std::forward<Tuple>(tpl))...);
   }
 }
@@ -130,8 +130,8 @@ auto squash_tuple(Tuple&& tpl)
 // Adds tuples by calling operator+ elementwise.
 namespace {
 template <typename TupleA, typename TupleB, size_t... Ids>
-auto add_tuples_help(TupleA&& a, TupleB&& b,
-                     index_sequence<Ids...>) -> decltype(auto) {
+auto add_tuples_help(TupleA&& a, TupleB&& b, index_sequence<Ids...>)
+    -> decltype(auto) {
   return std::make_tuple(std::get<Ids>(std::forward<TupleA>(a)) +
                          std::get<Ids>(std::forward<TupleB>(b))...);
 }
