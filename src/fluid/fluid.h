@@ -20,14 +20,14 @@
 
 #pragma once
 
+#include <sycl/sycl.hpp>
+
 #include <algorithm>  // std::fill
 #include <cmath>      // std::round
 #include <cstdlib>    // std::size_t
 #include <exception>  // std::exception_ptr
 #include <iostream>   // std::cout, std::endl
 #include <vector>     // std::vector
-
-#include <sycl/sycl.hpp>
 
 // Kernel declarations.
 class fluid_boundary;

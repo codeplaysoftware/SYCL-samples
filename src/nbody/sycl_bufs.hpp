@@ -20,11 +20,11 @@
 
 #pragma once
 
-#include <type_traits>
+#include "tuple_utils.hpp"
 
 #include <sycl/sycl.hpp>
 
-#include "tuple_utils.hpp"
+#include <type_traits>
 
 // Template function object which transforms buffers to device read accessors
 struct BufToReadAccFunc {

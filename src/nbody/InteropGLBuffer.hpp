@@ -10,6 +10,8 @@
 #define CUDA_GL_INTEROP_API_AVAILABLE 0
 #endif
 
+#include <iostream>
+
 /// @brief Magnum GL Buffer wrapper implementing backend-specific interop to
 /// work directly on OpenGL device buffers instead of using host memory.
 ///

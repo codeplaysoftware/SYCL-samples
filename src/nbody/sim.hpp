@@ -20,16 +20,16 @@
 
 #pragma once
 
-#include <iostream>
-#include <memory>
-#include <random>
-
-#include <sycl/sycl.hpp>
-
 #include "../include/double_buf.hpp"
 #include "integrator.hpp"
 #include "sycl_bufs.hpp"
 #include "tuple_utils.hpp"
+
+#include <sycl/sycl.hpp>
+
+#include <iostream>
+#include <memory>
+#include <random>
 
 // Convenience types
 template <typename num_t>

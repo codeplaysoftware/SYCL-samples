@@ -131,8 +131,7 @@ auto squash_tuple(Tuple&& tpl)
 namespace {
 template <typename TupleA, typename TupleB, size_t... Ids>
 auto add_tuples_help(TupleA&& a, TupleB&& b, index_sequence<Ids...>)
-    -> decltype(std::make_tuple(std::get<Ids>(std::forward<TupleA>(a)) +
-                                std::get<Ids>(std::forward<TupleB>(b))...)) {
+    -> decltype(auto) {
   return std::make_tuple(std::get<Ids>(std::forward<TupleA>(a)) +
                          std::get<Ids>(std::forward<TupleB>(b))...);
 }
@@ -143,9 +142,7 @@ template <
     size_t SizeA = std::tuple_size<typename std::decay<TupleA>::type>::value,
     size_t SizeB = std::tuple_size<typename std::decay<TupleB>::type>::value,
     typename Ids = make_index_sequence<SizeA>>
-auto add_tuples(TupleA&& a, TupleB&& b)
-    -> decltype(add_tuples_help(std::forward<TupleA>(a),
-                                std::forward<TupleB>(b), Ids{})) {
+auto add_tuples(TupleA&& a, TupleB&& b) -> decltype(auto) {
   static_assert(SizeA == SizeB, "Cannot add tuples of differing sizes.");
   return add_tuples_help(std::forward<TupleA>(a), std::forward<TupleB>(b),
                          Ids{});
