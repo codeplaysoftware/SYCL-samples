@@ -106,6 +106,20 @@ example. The purpose is not to compare performance, but to show the
 similarities and differences between them. See block_host for the OpenMP 
 implementation.
 
+### SYCL-Graph Samples
+
+Code examples demonstrating the usage of [`sycl_ext_oneapi_graph`](https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/experimental/sycl_ext_oneapi_graph.asciidoc) extension.
+
+| **Example**  | **Description**  |
+| --------------- | --------------- |
+| [Dot Product](src/SYCL-Graph/dotProduct.cpp) | This example uses the explicit graph creation API to perform a dot product operation. |
+| [Diamond Dependency](src/SYCL-Graph/diamondDependency.cpp) | This code example shows how a SYCL queue can be put into a recording state, which allows a `command_graph` object to be populated by the command-groups submitted to the queue. Once the graph is complete, recording finishes on the queue to put it back into the default executing state. The graph is then finalized so that no more nodes can be added. Lastly, the graph is submitted in its entirety for execution via `handler::ext_oneapi_graph(command_graph<graph_state::executable>)`. |
+| [Dynamic Parameter Update](src/SYCL-Graph/dynamicParamUpdateUSM.cpp) | An example showing a graph with a single kernel node that is created using a free function kernel with `handler::set_args()` and having its node arguments updated. Additionally, [dynamicParamUpdateBuffers.cpp](src/SYCL-Graph/dynamicParamUpdateBuffers.cpp) demonstrates using this feature with buffers and accessors. |
+| [Dynamic Command Groups](src/SYCL-Graph/dynamicCG.cpp) | Example showing how a graph with a dynamic command group node can be updated.|
+| [Dynamic Command Groups With Dynamic Parameters](src/SYCL-Graph/dynamicCG_with_Params.cpp) | Example showing how a graph with a dynamic command group that uses dynamic parameters in a node can be updated.|
+| [Whole Graph Update](src/SYCL-Graph/whole_graph_update.cpp) | Example that shows recording and updating several nodes with different parameters using whole-graph update.|
+
+
 ## Dependencies
 The graphical demos use
 [Magnum](https://doc.magnum.graphics/magnum/getting-started.html#getting-started-setup-install)

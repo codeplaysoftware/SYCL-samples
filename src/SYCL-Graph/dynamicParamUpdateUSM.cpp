@@ -1,0 +1,88 @@
+/***************************************************************************
+ *
+ *  Copyright (C) Codeplay Software Limited
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ **************************************************************************/
+
+#include <sycl/sycl.hpp>
+
+namespace sycl_ext = sycl::ext::oneapi::experimental;
+using namespace sycl;
+
+SYCL_EXT_ONEAPI_FUNCTION_PROPERTY((sycl_ext::nd_range_kernel<1>))
+void ff_1(int *PtrX, int *PtrY, int *PtrZ) {
+  size_t GlobalID =
+      ext::oneapi::this_work_item::get_nd_item<1>().get_global_id();
+  PtrX[GlobalID] += PtrY[GlobalID] * PtrZ[GlobalID];
+}
+
+int main() {
+  constexpr size_t Size = 1024;
+
+  queue Queue{};
+  auto Context = Queue.get_context();
+  auto Device = Queue.get_device();
+
+  // USM allocations for kernel input/output
+  int *PtrX = malloc_shared<int>(Size, Queue);
+  int *PtrY = malloc_device<int>(Size, Queue);
+
+  int *PtrZ = malloc_shared<int>(Size, Queue);
+  int *PtrQ = malloc_device<int>(Size, Queue);
+
+#ifndef __SYCL_DEVICE_ONLY__
+  kernel_bundle Bundle = get_kernel_bundle<bundle_state::executable>(Context);
+  kernel_id Kernel_id = sycl_ext::get_kernel_id<ff_1>();
+  kernel Kernel = Bundle.get_kernel(Kernel_id);
+
+  // Graph containing a kernel node
+  sycl_ext::command_graph Graph(Context, Device);
+
+  int Scalar = 42;
+  // Create graph dynamic parameters
+  sycl_ext::dynamic_parameter DynParamInput(Graph, PtrX);
+  sycl_ext::dynamic_parameter DynParamScalar(Graph, Scalar);
+
+  // The node uses PtrX as an input & output parameter, with operand
+  // mySclar as another argument.
+  sycl_ext::node KernelNode = Graph.add([&](handler &CGH) {
+    CGH.set_args(DynParamInput, PtrY, DynParamScalar);
+    CGH.parallel_for(range{Size}, Kernel);
+  });
+
+  // Create an executable graph with the updatable property.
+  auto ExecGraph = Graph.finalize(sycl_ext::property::graph::updatable{});
+
+  // Execute graph, then update without needing to wait for it to complete
+  Queue.ext_oneapi_graph(ExecGraph);
+
+  // Change ptrX argument to PtrZ
+  DynParamInput.update(PtrZ);
+
+  // Change Scalar argument to NewScalar
+  int NewScalar = 12;
+  DynParamScalar.update(NewScalar);
+
+  // Update KernelNode in the executable graph with the new parameters
+  ExecGraph.update(KernelNode);
+  // Execute graph again
+  Queue.ext_oneapi_graph(ExecGraph);
+  Queue.wait();
+#endif
+
+  sycl::free(PtrX, Queue);
+  sycl::free(PtrY, Queue);
+  sycl::free(PtrZ, Queue);
+  sycl::free(PtrQ, Queue);
+}
