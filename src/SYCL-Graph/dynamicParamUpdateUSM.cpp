@@ -15,6 +15,8 @@
  *
  **************************************************************************/
 
+#include "common.hpp"
+
 #include <sycl/sycl.hpp>
 
 namespace sycl_ext = sycl::ext::oneapi::experimental;
@@ -31,6 +33,9 @@ int main() {
   constexpr size_t Size = 1024;
 
   queue Queue{};
+
+  ensure_full_aspects_support(Queue.get_device());
+
   auto Context = Queue.get_context();
   auto Device = Queue.get_device();
 

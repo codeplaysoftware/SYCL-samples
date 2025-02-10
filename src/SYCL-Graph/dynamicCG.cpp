@@ -15,6 +15,8 @@
  *
  **************************************************************************/
 
+#include "common.hpp"
+
 #include <sycl/sycl.hpp>
 
 namespace sycl_ext = sycl::ext::oneapi::experimental;
@@ -24,6 +26,9 @@ int main() {
   constexpr size_t Size = 1024;
 
   queue Queue{};
+
+  ensure_full_graph_support(Queue.get_device());
+
   sycl_ext::command_graph Graph{Queue.get_context(), Queue.get_device()};
 
   int *Ptr = malloc_device<int>(Size, Queue);
