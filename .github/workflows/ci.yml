@@ -4,10 +4,10 @@ on: [push, pull_request]
 
 permissions:
   contents: read
+  packages: write
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
   BUILD_TYPE: Release
 
 jobs:
@@ -54,6 +54,16 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Use fork owner's container registry in pull request CI
+      # - this solution assumes the fork is <username>/SYCL-Samples
+      - name: Set image name
+        run: |
+          IMAGE_NAME=${{ github.repository }}
+          REPO_OWNER=${{ github.repository_owner }}
+          ACTOR=${{ github.actor }}
+          IMAGE_NAME=${IMAGE_NAME/$REPO_OWNER/$ACTOR}
+          echo IMAGE_NAME=${IMAGE_NAME} >> $GITHUB_ENV
 
       - name: Extract metadata
         id: meta
@@ -108,7 +118,7 @@ jobs:
           -DENABLE_SPIR=ON
           -DENABLE_CUDA=ON -DCUDA_COMPUTE_CAPABILITY=80
           -DENABLE_HIP=ON -DHIP_GFX_ARCH=gfx90a
-          -DCMAKE_CXX_FLAGS='-Wall -Wextra -Wpedantic -Werror'
+          -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror --warning-suppression-mappings=${PWD}/ci/warning-suppresions.txt"
           -G Ninja
 
       - name: Build

@@ -22,10 +22,10 @@
 # Detect available backends
 # ------------------------------------------------
 execute_process(
-    COMMAND bash -c "! sycl-ls | grep -q ext_oneapi_cuda"
+    COMMAND bash -c "! sycl-ls | grep -q cuda"
     RESULT_VARIABLE CUDA_BACKEND_AVAILABLE)
 execute_process(
-    COMMAND bash -c "! sycl-ls | grep -q ext_oneapi_hip"
+    COMMAND bash -c "! sycl-ls | grep -q hip"
     RESULT_VARIABLE HIP_BACKEND_AVAILABLE)
 execute_process(
     COMMAND bash -c "! sycl-ls | grep -q 'opencl\\|level_zero'"
@@ -41,7 +41,7 @@ set(SYCL_TARGETS "")
 # ------------------------------------------------
 if(${ENABLE_CUDA})
     string(JOIN "," SYCL_TARGETS "${SYCL_TARGETS}" "nvptx64-nvidia-cuda")
-    set(DEFAULT_CUDA_COMPUTE_CAPABILITY "50")
+    set(DEFAULT_CUDA_COMPUTE_CAPABILITY "60")
     set(CUDA_COMPUTE_CAPABILITY "" CACHE BOOL
         "CUDA architecture (compute capability), e.g. sm_80. Default value is auto-configured using nvidia-smi.")
     # Auto-configure if not specified by user
@@ -65,7 +65,7 @@ endif()
 # ------------------------------------------------
 if(${ENABLE_HIP})
     string(JOIN "," SYCL_TARGETS "${SYCL_TARGETS}" "amdgcn-amd-amdhsa")
-    set(DEFAULT_HIP_GFX_ARCH "gfx906")
+    set(DEFAULT_HIP_GFX_ARCH "gfx908")
     set(HIP_GFX_ARCH "" CACHE BOOL
         "HIP architecture tag, e.g. gfx90a. Default value is auto-configured using rocminfo.")
     # Auto-configure if not specified by user
