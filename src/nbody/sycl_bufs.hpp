@@ -31,7 +31,7 @@ struct BufToReadAccFunc {
   template <typename In>
   AUTO_FUNC(
       // pair of (buffer, handler)
-      operator()(In && in), std::forward<In>(in).first.template get_access(
+      operator()(In && in), std::forward<In>(in).first.template get_access<>(
                                 *std::forward<In>(in).second, sycl::read_only))
 };
 
@@ -40,7 +40,7 @@ struct BufToDcdWriteAccFunc {
   // pair of (buffer, handler)
   template <typename In>
   AUTO_FUNC(operator()(In && in),
-            std::forward<In>(in).first.template get_access(
+            std::forward<In>(in).first.template get_access<>(
                 *std::forward<In>(in).second, sycl::write_only))
 };
 
@@ -48,9 +48,9 @@ struct BufToDcdWriteAccFunc {
 struct BufToHostReadAccFunc {
   template <typename In>
   auto operator()(In&& in)
-      -> decltype(std::forward<In>(in).template get_host_access(
+      -> decltype(std::forward<In>(in).template get_host_access<>(
           sycl::read_only)) {
-    return std::forward<In>(in).template get_host_access(sycl::read_only);
+    return std::forward<In>(in).template get_host_access<>(sycl::read_only);
   }
 };
 
@@ -58,9 +58,9 @@ struct BufToHostReadAccFunc {
 struct BufToHostDcdWriteAccFunc {
   template <typename In>
   auto operator()(In&& in)
-      -> decltype(std::forward<In>(in).template get_host_access(
+      -> decltype(std::forward<In>(in).template get_host_access<>(
           sycl::write_only)) {
-    return std::forward<In>(in).template get_host_access(sycl::write_only);
+    return std::forward<In>(in).template get_host_access<>(sycl::write_only);
   }
 };
 
