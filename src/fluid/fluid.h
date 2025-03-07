@@ -80,7 +80,7 @@ class SYCLFluidContainer {
   // Returns a pointer to the pixel data buffer.
   template <typename Func>
   void WithData(Func&& func) {
-    auto acc{img.template get_host_access(sycl::read_only)};
+    auto acc{img.template get_host_access<>(sycl::read_only)};
     func(acc.get_pointer());
   }
 
@@ -207,8 +207,8 @@ class SYCLFluidContainer {
     // Update the image pixel data with the appropriate color for a given
     // density.
     queue.submit([&](sycl::handler& cgh) {
-      auto img_acc{img.template get_access(cgh, sycl::write_only)};
-      auto density_a{density_b.template get_access(cgh, sycl::read_write)};
+      auto img_acc{img.template get_access<>(cgh, sycl::write_only)};
+      auto density_a{density_b.template get_access<>(cgh, sycl::read_write)};
       cgh.parallel_for<image_kernal>(
           sycl::range<1>(size * size), [=](sycl::item<1> item) {
             auto index{item.get_id(0)};
@@ -240,7 +240,7 @@ class SYCLFluidContainer {
   // Creates read_write accessors from a buffer.
   template <typename T>
   static read_write_accessor CreateAccessor(sycl::handler& cgh, T buffer) {
-    return buffer.template get_access(cgh, sycl::read_write);
+    return buffer.template get_access<>(cgh, sycl::read_write);
   }
 
   // Get clamped index based off of coordinates.
