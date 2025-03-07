@@ -8,6 +8,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
   BUILD_TYPE: Release
 
 jobs:
@@ -54,16 +55,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Use fork owner's container registry in pull request CI
-      # - this solution assumes the fork is <username>/SYCL-Samples
-      - name: Set image name
-        run: |
-          IMAGE_NAME=${{ github.repository }}
-          REPO_OWNER=${{ github.repository_owner }}
-          ACTOR=${{ github.actor }}
-          IMAGE_NAME=${IMAGE_NAME/$REPO_OWNER/$ACTOR}
-          echo IMAGE_NAME=${IMAGE_NAME} >> $GITHUB_ENV
 
       - name: Extract metadata
         id: meta
