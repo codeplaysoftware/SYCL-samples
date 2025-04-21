@@ -1,4 +1,4 @@
-FROM ubuntu:24.04@sha256:3f85b7caad41a95462cf5b787d8a04604c8262cdcdf9a472b8c52ef83375fe15
+FROM ubuntu:24.04@sha256:1e622c5f073b4f6bfad6632f2616c7f59ef256e96fe78bf6a595d1dc4376ac02
 
 # Get basic dependencies from Ubuntu repositories
 ARG DEBIAN_FRONTEND=noninteractive
