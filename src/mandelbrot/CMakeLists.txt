@@ -6,5 +6,5 @@ target_link_libraries(Mandelbrot PRIVATE
                                  Magnum::Magnum Magnum::GL Magnum::Application
                                  Magnum::Shaders Magnum::Primitives)
 
-target_compile_options(Mandelbrot PUBLIC ${SYCL_FLAGS})
+target_compile_options(Mandelbrot PUBLIC ${SYCL_FLAGS} -Wno-c++20-extensions)
 target_link_options(Mandelbrot PUBLIC ${SYCL_FLAGS})

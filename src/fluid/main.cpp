@@ -118,12 +118,12 @@ class FluidSimulationApp : public Magnum::Platform::Application {
  private:
   void keyPressEvent(KeyEvent& event) override final {
     // Reset fluid container to empty if SPACE key is pressed.
-    if (event.key() == KeyEvent::Key::Space) {
+    if (event.key() == Sdl2Application::Key::Space) {
       fluid_.Reset();
     }
   }
 
-  void mouseMoveEvent(MouseMoveEvent& event) override final {
+  void pointerMoveEvent(PointerMoveEvent& event) override final {
     // Get mouse position as fraction of window size.
     auto x{event.position().x() / float(windowSize().x())};
     auto y{1.0f - event.position().y() / float(windowSize().y())};

@@ -5,5 +5,5 @@ target_link_libraries(GameOfLife PRIVATE
                                  Magnum::Magnum Magnum::GL Magnum::Application
                                  Magnum::Shaders Magnum::Primitives)
 
-target_compile_options(GameOfLife PUBLIC ${SYCL_FLAGS})
+target_compile_options(GameOfLife PUBLIC ${SYCL_FLAGS} -Wno-c++20-extensions)
 target_link_options(GameOfLife PUBLIC ${SYCL_FLAGS})
