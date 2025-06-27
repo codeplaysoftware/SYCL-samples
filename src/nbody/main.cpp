@@ -572,17 +572,17 @@ class NBodyApp : public Magnum::Platform::Application {
     m_imgui.handleKeyReleaseEvent(event);
   }
 
-  void mousePressEvent(MouseEvent& event) override {
-    m_imgui.handleMousePressEvent(event);
+  void pointerPressEvent(PointerEvent& event) override {
+    m_imgui.handlePointerPressEvent(event);
   }
-  void mouseReleaseEvent(MouseEvent& event) override {
-    m_imgui.handleMouseReleaseEvent(event);
+  void pointerReleaseEvent(PointerEvent& event) override {
+    m_imgui.handlePointerReleaseEvent(event);
   }
-  void mouseMoveEvent(MouseMoveEvent& event) override {
-    m_imgui.handleMouseMoveEvent(event);
+  void pointerMoveEvent(PointerMoveEvent& event) override {
+    m_imgui.handlePointerMoveEvent(event);
   }
-  void mouseScrollEvent(MouseScrollEvent& event) override {
-    if (m_imgui.handleMouseScrollEvent(event)) {
+  void scrollEvent(ScrollEvent& event) override {
+    if (m_imgui.handleScrollEvent(event)) {
       /* Prevent scrolling the page */
       event.setAccepted();
       return;

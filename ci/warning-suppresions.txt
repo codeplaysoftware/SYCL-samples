@@ -1,8 +1,1 @@
 # Suppress warnings in external code from submodules
-
-[nontrivial-memcall]
-src:*/modules/imgui/*
-
-[deprecated-literal-operator]
-src:*/modules/corrade/*
-src:*/modules/magnum/*

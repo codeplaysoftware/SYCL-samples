@@ -121,7 +121,7 @@ class MandelbrotApp : public Magnum::Platform::Application {
     swapBuffers();
   }
 
-  void mouseScrollEvent(MouseScrollEvent& event) override {
+  void scrollEvent(ScrollEvent& event) override {
     // Zoom in or out on the plane
     auto inc = event.offset().y();
     if (inc > 0) {
@@ -131,9 +131,10 @@ class MandelbrotApp : public Magnum::Platform::Application {
     }
   }
 
-  void mouseMoveEvent(MouseMoveEvent& event) override {
+  void pointerMoveEvent(PointerMoveEvent& event) override {
     // Drag only if left button clicked
-    if (!(event.buttons() & MouseMoveEvent::Button::Left)) {
+    using enum Magnum::Platform::Sdl2Application::Pointer;
+    if (!(event.pointers() & Pointer::MouseLeft)) {
       return;
     }
     // Calculate normalized coordinates
@@ -148,12 +149,12 @@ class MandelbrotApp : public Magnum::Platform::Application {
     // If the difference is big enough, drag the center point
     // and with it the viewable part of the plane. The epsilon
     // is necessary to avoid noisy jumps
-    constexpr double EPS = .1;
+    constexpr auto EPS = .1;
     if (dx < EPS && dx > -EPS) {
       m_ctr_x += dx * m_range;
     }
     if (dy < EPS && dy > -EPS) {
-      m_ctr_y += dy * m_range * double(WIDTH) / double(HEIGHT);
+      m_ctr_y += dy * m_range * WIDTH / HEIGHT;
     }
 
     m_prev_mx = x;

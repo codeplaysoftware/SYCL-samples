@@ -166,18 +166,19 @@ class GameOfLifeApp : public Magnum::Platform::Application {
     }
   }
 
-  void mousePressEvent(MouseEvent& event) override {
+  void pointerPressEvent(PointerEvent& event) override {
     handleMouse(event.position().x(), event.position().y());
   }
 
-  void mouseMoveEvent(MouseMoveEvent& event) override {
+  void pointerMoveEvent(PointerMoveEvent& event) override {
     // Drag only if left button clicked
-    if ((event.buttons() & MouseMoveEvent::Button::Left)) {
+    using enum Magnum::Platform::Sdl2Application::Pointer;
+    if ((event.pointers() & MouseLeft)) {
       handleMouse(event.position().x(), event.position().y());
     }
   }
 
-  void mouseScrollEvent(MouseScrollEvent& event) override {
+  void scrollEvent(ScrollEvent& event) override {
     auto prevZoom = m_zoom;
     auto inc = event.offset().y();
     if (inc > 0) {
@@ -198,7 +199,7 @@ class GameOfLifeApp : public Magnum::Platform::Application {
 
   void keyPressEvent(KeyEvent& event) override {
     // (Un)pause on SPACE
-    if (event.key() == KeyEvent::Key::Space) {
+    if (event.key() == Sdl2Application::Key::Space) {
       m_paused = !m_paused;
     }
   }
